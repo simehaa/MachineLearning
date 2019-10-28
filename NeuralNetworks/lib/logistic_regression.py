@@ -31,18 +31,18 @@ class SGDClassification:
     Example
     -------
     clf = SGDClassification(100, 1000)
-    clf.predict(X, y)
-    y_pred = clf.fit(X_test)
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
     """
 
-    def __init__(self, batch_size, epochs):
+    def __init__(self, batch_size=100, epochs=1000):
         self.batch_size = batch_size
         self.epochs = epochs
 
-    def fit(self, X, y, beta0=None):
+    def fit(self, X, y, beta=None):
         """
         Perform SGD with mini batches on X, y as training data. if initial
-        guess, beta0 is not provided, then this will be a random guess with
+        guess, beta is not provided, then this will be a random guess with
         values in [- 0.7, + 0.7].
 
         Parameters
@@ -53,7 +53,7 @@ class SGDClassification:
         y : array, shape (N, )
             Training data output values.
 
-        beta0 : array, shape(features, )
+        beta : array, shape(features, )
             Initial guess for parameter vector, size num_features.
 
         Returns
@@ -63,34 +63,37 @@ class SGDClassification:
             can be called.
         """
         N, self.features = X.shape
-        if beta0 is not None:
-            self.beta = (np.random.random(p) - 0.5) * 1.4
+        if beta == None:
+            self.beta = (np.random.random(self.features) - 0.5) * 1.4
         else:
-            if beta0.shape[0] == self.features:
-                self.beta = beta0
+            if beta.shape[0] == self.features:
+                self.beta = beta
             else:
                 raise ValueError(
-                    "beta0 must be of the same shape as number of columns in X"
+                    "beta must be of the same shape as number of columns in X"
                 )
 
         num_batches = int(N / self.batch_size)
-        batches = np.random.permutation(N)
-        batches.reshape(num_batches, self.batch_size)
+        batches = np.random.permutation(num_batches * self.batch_size)
+        batches = batches.reshape(num_batches, self.batch_size)
         learning_rate = lambda t: 1 / (t + 10)
+        self.bias = (np.random.random() - 0.5) * 0.2 # in [- 0.1, + 0.1]
 
         # iterative loop over epochs
-        for t in self.epochs:
+        for t in range(self.epochs):
             # loop over mini batches
             for _batch in range(num_batches):
                 # pick a random batch, num_batches times
                 random_batch_number = np.random.randint(num_batches)
                 i = batches[random_batch_number, :]  # random batch indices
                 p_new = self._update_p(X[i, :])
-                self.beta -= learning_rate(t) * X[i, :].T @ (y[i] - p_new)
+                diff = p_new - y[i]
+                self.bias -= np.mean(diff)
+                self.beta -= learning_rate(t) * X[i, :].T @ diff
 
         return None  # self.beta is now updated and predict() can be called
 
-    def predict(self, Xt):
+    def predict(self, Xt, int=True):
         """
         Provide a prediction for some data X.
 
@@ -107,8 +110,14 @@ class SGDClassification:
         if Xt.shape[1] != self.features:
             raise ValueError(f"Xt must have {self.features} columns!")
         else:
-            y_pred = Xt @ self.beta
-            return y_pred
+            y_pred = self._update_p(Xt)
+            if int:
+                y_pred_int = np.zeros(y_pred.shape, dtype=np.int32)
+                y_pred_int[y_pred < 0.0] = 0
+                y_pred_int[y_pred >= 0.0] = 1
+                return y_pred_int
+            else:
+                return y_pred
 
     def _update_p(self, Xi):
         """
@@ -124,7 +133,8 @@ class SGDClassification:
         Returns
         -------
         p_new : array, shape(i, )
-            Updated probability vector according to the sigmoid function.
+            Updated probability vector according to the tanh function.
         """
-        p_new = 1.0 / (1 + np.exp(-Xi @ self.beta))
+        # p_new = 1.0 / (1 + np.exp(-Xi @ self.beta)) # sigmoid
+        p_new = np.tanh(Xi @ self.beta + self.bias) # tanh
         return p_new

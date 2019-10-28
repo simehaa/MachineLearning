@@ -1,4 +1,4 @@
-class NeuralNetwork(object):
+class NeuralNetwork:
     """
     Info
 
@@ -11,9 +11,14 @@ class NeuralNetwork(object):
     b :
     """
 
-    def __init__(self, arg):
-        self.arg = arg
+    def __init__(self, batch_size, epochs):
+        self.batch_size = batch_size
+        self.epochs = epochs
 
-    def feedforward(self, ja):
+    def feedforward(self, Xi, yi):
 
+        for i in batches:
+            # Xi, yi = batch(i) # X (batchsize, nodes/features), y (batchsize, )
+
+            Z = weights[i] @
         return None

@@ -93,7 +93,7 @@ def preprocess_raw_data():
     preprocessor = ColumnTransformer(transformers=[("onehot", enc, [0, 1, 2])])
     X_one_hot_encoded = preprocessor.fit_transform(X_categorical)
     X = np.concatenate((X_one_hot_encoded, X_continuous), axis=1)
-    p = X_one_hot_encoded.shape[1] # index that separates OneHot and continuous colums
+    p = X_one_hot_encoded.shape[1]  # index that separates OneHot and continuous colums
 
     # ----- Split of training and test -----
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
@@ -123,6 +123,7 @@ def preprocess_raw_data():
     # Save new files
     np.savez("./data/processed/train_data.npz", X=X_train, y=y_train)
     np.savez("./data/processed/test_data.npz", X=X_test, y=y_test)
+
 
 """
 Columns after preprocessing (30 columns)

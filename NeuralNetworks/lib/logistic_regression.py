@@ -77,7 +77,7 @@ class SGDClassification:
         batches = np.random.permutation(num_batches * self.batch_size)
         batches = batches.reshape(num_batches, self.batch_size)
         learning_rate = lambda t: 1 / (t + 10)
-        self.bias = (np.random.random() - 0.5) * 0.2 # in [- 0.1, + 0.1]
+        self.bias = (np.random.random() - 0.5) * 0.2  # in [- 0.1, + 0.1]
 
         # iterative loop over epochs
         for t in range(self.epochs):
@@ -136,5 +136,5 @@ class SGDClassification:
             Updated probability vector according to the tanh function.
         """
         # p_new = 1.0 / (1 + np.exp(-Xi @ self.beta)) # sigmoid
-        p_new = np.tanh(Xi @ self.beta + self.bias) # tanh
+        p_new = np.tanh(Xi @ self.beta + self.bias)  # tanh
         return p_new

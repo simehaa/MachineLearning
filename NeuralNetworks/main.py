@@ -1,11 +1,12 @@
 import numpy as np
 from lib.preprocessing import *
+
 # from lib.neural_network import *
 from lib.logistic_regression import *
 
 
 def main():
-    preprocess_raw_data() # Saves new data files in ./data/processed/
+    # preprocess_raw_data() # Saves new data files in ./data/processed/
 
     train_data = np.load("./data/processed/train_data.npz", allow_pickle=True)
     test_data = np.load("./data/processed/test_data.npz", allow_pickle=True)
@@ -22,6 +23,7 @@ def main():
     print(f"SGD accuracy: {acc*100:2.2f} %.")
     print(f"\tNo. of ones: {ones}")
     print(f"\tNo. of zeros: {zeros}")
+
 
 def accuracy(y, y_pred):
     """
@@ -46,6 +48,7 @@ def accuracy(y, y_pred):
     ones = np.sum(total[y_pred == 1])
     zeros = np.sum(total[y_pred == 0])
     return acc, ones, zeros
+
 
 if __name__ == "__main__":
     main()

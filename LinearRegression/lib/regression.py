@@ -46,18 +46,15 @@ class Regression:
         self.y_temp = y
         self.p = None
 
-
     def update_X(self, X):
         self.X = X
         self.X_temp = X
         return None
 
-
     def update_y(self, y):
         self.y = y
         self.y_temp = y
         return None
-
 
     def svd_inv(self, A):
         """
@@ -72,7 +69,6 @@ class Regression:
         """
         U, D, VT = np.linalg.svd(A)
         return VT.T @ np.linalg.inv(np.diag(D)) @ U.T
-
 
     def ols_fit(self, svd=False):
         """
@@ -93,7 +89,6 @@ class Regression:
         self.p = self.beta.shape[0]
         return None
 
-
     def ridge_fit(self, alpha=1e-6):
         """
         Info:
@@ -109,13 +104,12 @@ class Regression:
         * beta: The coefficient vector for the Ridge scheme
         """
         model = Ridge(alpha=alpha, normalize=True)
-        model.fit(self.X_temp,self.y_temp)
+        model.fit(self.X_temp, self.y_temp)
         p = self.X_temp.shape[1]
         self.beta = np.transpose(model.coef_)
         self.beta[0] = model.intercept_
         self.p = self.beta.shape[0]
         return None
-
 
     def lasso_fit(self, alpha=1e-6):
         """
@@ -131,13 +125,12 @@ class Regression:
         * beta: The coefficient vector for the Lasso scheme.
         """
         model = Lasso(alpha=alpha, normalize=True, tol=0.05, max_iter=2500)
-        model.fit(self.X_temp,self.y_temp)
+        model.fit(self.X_temp, self.y_temp)
         p = self.X_temp.shape[1]
         self.beta = np.transpose(model.coef_)
         self.beta[0] = model.intercept_
         self.p = self.beta.shape[0]
         return None
-
 
     def predict(self, X):
         """
@@ -153,30 +146,30 @@ class Regression:
         """
         if self.p:
             if X.shape[1] != self.p:
-                raise ValueError(f"Model has produced a beta with {self.p} features" +
-                f" and X in predict(X) has {X.shape[1]} columns.")
+                raise ValueError(
+                    f"Model has produced a beta with {self.p} features"
+                    + f" and X in predict(X) has {X.shape[1]} columns."
+                )
             y_pred = X @ self.beta
             return y_pred
         else:
-            print("Warning, cannot predict because nothing has been fitted yet!" +
-             " Try using ols_fit(), ridge_fit() or lasso_fit() first.")
-
-
+            print(
+                "Warning, cannot predict because nothing has been fitted yet!"
+                + " Try using ols_fit(), ridge_fit() or lasso_fit() first."
+            )
 
     def mean_squared_error(self, y, y_pred):
         """Evaluate the mean squared error for y, y_pred"""
-        mse = np.mean((y - y_pred)**2)
+        mse = np.mean((y - y_pred) ** 2)
         return mse
-
 
     def r2_score(self, y, y_pred):
         """Evaluate the R2 (R squared) score for y, y_pred"""
         y_mean = np.mean(y)
-        RSS = np.sum((y - y_pred)**2) # residual sum of squares
-        TSS = np.sum((y - y_mean)**2) # total sum of squares
-        r2 = 1 - RSS/TSS
+        RSS = np.sum((y - y_pred) ** 2)  # residual sum of squares
+        TSS = np.sum((y - y_mean) ** 2)  # total sum of squares
+        r2 = 1 - RSS / TSS
         return r2
-
 
     def k_fold_cross_validation(self, k, method, alpha=1e-3, svd=False):
         """
@@ -196,16 +189,16 @@ class Regression:
         mse = np.zeros(k)
         r2 = np.zeros(k)
         N = self.X.shape[0]
-        p = np.random.permutation(N) # permutation array for shuffling of data
-        length = floor(N/k) # number of indices per interval k.
+        p = np.random.permutation(N)  # permutation array for shuffling of data
+        length = floor(N / k)  # number of indices per interval k.
         for i in range(k):
-            start = i*length
-            stop = (i+1)*length
+            start = i * length
+            stop = (i + 1) * length
             # split
             X_test = self.X[p[start:stop]]
             y_test = self.y[p[start:stop]]
-            self.X_temp = np.concatenate((self.X[p[:start]],self.X[p[stop:]]),axis=0)
-            self.y_temp = np.concatenate((self.y[p[:start]],self.y[p[stop:]]))
+            self.X_temp = np.concatenate((self.X[p[:start]], self.X[p[stop:]]), axis=0)
+            self.y_temp = np.concatenate((self.y[p[:start]], self.y[p[stop:]]))
             # fit
             if method == "ols":
                 self.ols_fit(svd=svd)
@@ -214,7 +207,7 @@ class Regression:
             elif method == "lasso":
                 self.lasso_fit(alpha=alpha)
             else:
-                raise ValueError("method must be \"osl\"/\"lasso\"/\"ridge\".")
+                raise ValueError('method must be "osl"/"lasso"/"ridge".')
             # predict
             y_pred = self.predict(X_test)
             # evaluate

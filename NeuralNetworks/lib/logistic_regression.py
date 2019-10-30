@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 
 class SGDClassification:
@@ -79,6 +80,7 @@ class SGDClassification:
         learning_rate = lambda t: 1 / (t + 10)
         self.bias = (np.random.random() - 0.5) * 0.2  # in [- 0.1, + 0.1]
 
+        self.printprogress(0)
         # iterative loop over epochs
         for t in range(self.epochs):
             # loop over mini batches
@@ -91,9 +93,11 @@ class SGDClassification:
                 self.bias -= np.mean(diff)
                 self.beta -= learning_rate(t) * X[i, :].T @ diff
 
+            self.printprogress((t+1)/self.epochs)
+
         return None  # self.beta is now updated and predict() can be called
 
-    def predict(self, Xt, int=True):
+    def predict(self, Xt):
         """
         Provide a prediction for some data X.
 
@@ -111,13 +115,9 @@ class SGDClassification:
             raise ValueError(f"Xt must have {self.features} columns!")
         else:
             y_pred = self._update_p(Xt)
-            if int:
-                y_pred_int = np.zeros(y_pred.shape, dtype=np.int32)
-                y_pred_int[y_pred < 0.0] = 0
-                y_pred_int[y_pred >= 0.0] = 1
-                return y_pred_int
-            else:
-                return y_pred
+            y_pred[y_pred < 0.5] = 0
+            y_pred[y_pred >= 0.5] = 1
+        return y_pred
 
     def _update_p(self, Xi):
         """
@@ -135,6 +135,20 @@ class SGDClassification:
         p_new : array, shape(i, )
             Updated probability vector according to the tanh function.
         """
-        # p_new = 1.0 / (1 + np.exp(-Xi @ self.beta)) # sigmoid
-        p_new = np.tanh(Xi @ self.beta + self.bias)  # tanh
+        p_new = 1.0 / (1 + np.exp(- Xi @ self.beta + self.bias)) # sigmoid
+        # p_new = np.tanh(Xi @ self.beta + self.bias)  # tanh
         return p_new
+
+    def printprogress(self, progress):
+        sys.stdout.flush()
+        width = 30
+        status = ""
+        if progress >= 1:
+            progress = 1
+            status = "Done.\r\n"
+        bl = "#"
+        li = "-"
+        nbl = int(round(width * progress))
+        text = f"\r\t[{nbl*bl + (width-nbl)*li}] {progress*100:3.2f} % {status}"
+        sys.stdout.write(text)
+        sys.stdout.flush()

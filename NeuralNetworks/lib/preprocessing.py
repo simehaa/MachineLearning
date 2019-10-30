@@ -1,12 +1,12 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
 from imblearn.over_sampling import RandomOverSampler
 
 
-def preprocess_raw_data():
+def preprocess_raw_data(test_size=0.2):
     """
     Read the raw data file in ../data/raw/ and preprocess that data.
 
@@ -58,6 +58,7 @@ def preprocess_raw_data():
     None
         Save train and test data in separate files in ../data/processed/
     """
+    print("\nPreprocessing\n")
     # Raw data
     dataframe = pd.read_excel("./data/raw/defaulted_cc-clients.xls")
     # 0th row and column are dataframe headers and indices
@@ -96,38 +97,37 @@ def preprocess_raw_data():
     p = X_one_hot_encoded.shape[1]  # index that separates OneHot and continuous colums
 
     # ----- Split of training and test -----
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
 
-    # ----- Upscale data -----
+    # ----- Scaling of continuous columns -----
+    scl = MinMaxScaler(feature_range=(0.0, 1.0))
+    # --- Scale both train/test according to training set:
+    scl.fit(X_train[:, p:].astype("float64")) # only continuous columns
+    X_train[:, p:] = scl.transform(X_train[:, p:].astype("float64"))
+    X_test[:, p:] = scl.transform(X_test[:, p:].astype("float64"))
+
+    # ----- Upscale training data -----
     # fraction (yi=1 / yi=0) = 1.0, this is achieved by
     # randomly resampling the rows with least occurence
     upscale = RandomOverSampler(sampling_strategy=1.0)
     X_train, y_train = upscale.fit_resample(X_train, y_train.astype("int"))
-    X_test, y_test = upscale.fit_resample(X_test, y_test.astype("int"))
 
-    # ----- Scaling of continuous columns -----
-    scl = StandardScaler(with_mean=True, with_std=True)
-    # --- Scale both train/test according to training set:
-    # scl.fit(X_train[:, p:].astype("float64")) # only continuous columns
-    # X_train[:, p:] = scl.transform(X_train[:, p:].astype("float64"))
-    # X_test[:, p:] = scl.transform(X_test[:, p:].astype("float64"))
-    # --- Scale train/test independently:
-    X_train[:, p:] = scl.fit_transform(X_train[:, p:].astype("float64"))
-    X_test[:, p:] = scl.fit_transform(X_test[:, p:].astype("float64"))
-
+    # ----- Ensure that the datatype is float -----
     X_train = X_train.astype("float64")
     X_test = X_test.astype("float64")
     y_train = y_train.astype("float64")
     y_test = y_test.astype("float64")
 
-    # Save new files
+    # ----- Save new files-----
     np.savez("./data/processed/train_data.npz", X=X_train, y=y_train)
     np.savez("./data/processed/test_data.npz", X=X_test, y=y_test)
+    print("\tNew preprocessed data saved in ./data/preprocessed/.\n")
 
 
 """
-Columns after preprocessing (30 columns)
--------
+X-data after preprocessing (29 columns)
+---------------------------------------
+
         One Hot Encoded Columns
         -----------------------
     0, SEX: Gender (1=male)
@@ -143,28 +143,30 @@ Columns after preprocessing (30 columns)
         Scaled Columns, with mean=0, std=1
         ----------------------------------
     9, LIMIT_BAL: Amount of given credit in NT dollars
-    10, AGE: Age in years
-    11, PAY_0: Repayment status in September, 2005 (-1=pay duly,
-        1=payment delay for one month,
-        2=payment delay for two months, ...
-        8=payment delay for eight months,
-        9=payment delay for nine months and above)
-    12, PAY_2: Repayment status in August, 2005 (scale same as above)
-    13, PAY_3: Repayment status in July, 2005 (scale same as above)
-    14, PAY_4: Repayment status in June, 2005 (scale same as above)
-    15, PAY_5: Repayment status in May, 2005 (scale same as above)
-    16, PAY_6: Repayment status in April, 2005 (scale same as above)
-    17, BILL_AMT1: Amount of bill statement in September, 2005 (NT dollar)
-    18, BILL_AMT2: Amount of bill statement in August, 2005 (NT dollar)
-    19, BILL_AMT3: Amount of bill statement in July, 2005 (NT dollar)
-    20, BILL_AMT4: Amount of bill statement in June, 2005 (NT dollar)
-    21, BILL_AMT5: Amount of bill statement in May, 2005 (NT dollar)
-    22, BILL_AMT6: Amount of bill statement in April, 2005 (NT dollar)
-    23, PAY_AMT1: Amount of previous payment in September, 2005 (NT dollar)
-    24, PAY_AMT2: Amount of previous payment in August, 2005 (NT dollar)
-    25, PAY_AMT3: Amount of previous payment in July, 2005 (NT dollar)
-    26, PAY_AMT4: Amount of previous payment in June, 2005 (NT dollar)
-    27, PAY_AMT5: Amount of previous payment in May, 2005 (NT dollar)
-    28, PAY_AMT6: Amount of previous payment in April, 2005 (NT dollar)
-    29, default.payment.next.month: Default payment (1=yes, 0=no)
+    10, AGE: Scaled age
+    11, PAY_0: Repayment status in September, 2005
+    12, PAY_2: Repayment status in August, 2005
+    13, PAY_3: Repayment status in July, 2005
+    14, PAY_4: Repayment status in June, 2005
+    15, PAY_5: Repayment status in May, 2005
+    16, PAY_6: Repayment status in April, 2005
+    17, BILL_AMT1: Amount of bill statement in September, 2005
+    18, BILL_AMT2: Amount of bill statement in August, 2005
+    19, BILL_AMT3: Amount of bill statement in July, 2005
+    20, BILL_AMT4: Amount of bill statement in June, 2005
+    21, BILL_AMT5: Amount of bill statement in May, 2005
+    22, BILL_AMT6: Amount of bill statement in April, 2005
+    23, PAY_AMT1: Amount of previous payment in September, 2005
+    24, PAY_AMT2: Amount of previous payment in August, 2005
+    25, PAY_AMT3: Amount of previous payment in July, 2005
+    26, PAY_AMT4: Amount of previous payment in June, 2005
+    27, PAY_AMT5: Amount of previous payment in May, 2005
+    28, PAY_AMT6: Amount of previous payment in April, 2005
+
+Y-data after preprocessing (1 column vector)
+--------------------------------------------
+
+        Output data
+        -----------
+    0, default.payment.next.month: Default payment (1=yes, 0=no)
 """

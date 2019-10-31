@@ -102,7 +102,7 @@ def preprocess_raw_data(test_size=0.2):
     # ----- Scaling of continuous columns -----
     scl = MinMaxScaler(feature_range=(0.0, 1.0))
     # --- Scale both train/test according to training set:
-    scl.fit(X_train[:, p:].astype("float64")) # only continuous columns
+    scl.fit(X_train[:, p:].astype("float64"))  # only continuous columns
     X_train[:, p:] = scl.transform(X_train[:, p:].astype("float64"))
     X_test[:, p:] = scl.transform(X_test[:, p:].astype("float64"))
 

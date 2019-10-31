@@ -93,7 +93,7 @@ class SGDClassification:
                 self.bias -= np.mean(diff)
                 self.beta -= learning_rate(t) * X[i, :].T @ diff
 
-            self.printprogress((t+1)/self.epochs)
+            self.printprogress((t + 1) / self.epochs)
 
         return None  # self.beta is now updated and predict() can be called
 
@@ -135,7 +135,7 @@ class SGDClassification:
         p_new : array, shape(i, )
             Updated probability vector according to the tanh function.
         """
-        p_new = 1.0 / (1 + np.exp(- Xi @ self.beta + self.bias)) # sigmoid
+        p_new = 1.0 / (1 + np.exp(-Xi @ self.beta + self.bias))  # sigmoid
         # p_new = np.tanh(Xi @ self.beta + self.bias)  # tanh
         return p_new
 

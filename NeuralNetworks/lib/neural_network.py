@@ -39,45 +39,24 @@ class NeuralNetwork:
     def __init__(self):
         pass
 
-    def cost_derivative(self, f, y):
+    def d_cost(self, f, y):
         """Same for MSE and Xentropy"""
         return f - y
 
     def sigmoid(self, z):
+        """Sigmoid function as activation function"""
         return 1 / (1 + np.exp(-z))
-
-    def sigmoid_derivative(self, z):
-        s = self.sigmoid(z)
-        return s * (1 - s)
-
-    def set_layers(self, layers):
-        """
-        Define the layers for this neural network. Calling SGD will not work
-        before EITHER set_layers OR load_weights_and_biases have been called.
-
-        Parameter
-        ---------
-        layers : list of int
-            List containing
-            * Number of inputs
-            * Number of nodes per hidden layer
-            * Number of outputs
-        """
-        self.layers = layers
-        self.num_layers = len(layers)
-        self.weights = np.array(
-            [np.random.normal(0, 0.1, (j, i)) for i, j in zip(layers[:-1], layers[1:])]
-        )
-        self.biases = np.array([np.random.normal(0, 0.1, (j, 1)) for j in layers[1:]])
 
     def SGD(
         self,
         X,
         y,
+        layers,
         epochs=50,
         batch_size=100,
-        learning_rate=0.01,
+        eta=0.01,
         cost_function="xentropy",
+        reg=1e-6
     ):
         """
         Info
@@ -99,82 +78,64 @@ class NeuralNetwork:
             a time and averages over those results. Larger batch
         """
         n, p = X.shape
-
+        self.layers = layers
+        self.num_layers = len(layers)
+        self.weights = np.array(
+            [np.random.normal(0, 0.5, (i, j)) for i, j in zip(layers[:-1], layers[1:])]
+        )
+        self.biases = np.array([np.zeros(j) for j in layers[1:]])
         num_batches = int(n / batch_size)
         batches = np.random.permutation(num_batches * batch_size)
         batches = batches.reshape(num_batches, batch_size)
-        factor = 1 / (batch_size * n)
-        nabla_b = np.array([np.zeros(b.shape) for b in self.biases])
-        nabla_w = np.array([np.zeros(w.shape) for w in self.weights])
-        learning_rate = lambda t: 1 / (t + 100)
-
+        nabla_b = np.array([np.zeros(b.shape) for b in self.biases], dtype=np.ndarray)
+        nabla_w = np.array([np.zeros(w.shape) for w in self.weights], dtype=np.ndarray)
         print(f"\tTraining Neural Network with {epochs} epochs")
         self.print_progress(0)
 
-        for e in range(1, epochs + 1):
-            eta = learning_rate(e) * factor
+        for e in range(epochs):
             # Epoch >>>
             batches = np.random.permutation(n)
             # loop over all mini batches
             for b in range(num_batches):
-                # Mini batch >>>
                 batch = batches[batch_size * b : batch_size * (b + 1)]
-                # loop over data points in mini batch
-                for xi, yi in zip(X[batch], y[batch]):
-                    # Feedforward >>>
-                    a = xi[:, np.newaxis]
-                    alist = [a]
-                    zlist = []
-                    for w, b in zip(self.weights, self.biases):
-                        z = w @ a + b
-                        a = self.sigmoid(z)
-                        zlist.append(z)
-                        alist.append(a)
-                    # <<< Feedforward
-                    # Backpropagation >>>
-                    # Last layer, delta_L:
-                    delta_l = self.cost_derivative(
-                        alist[-1], yi
-                    ) * self.sigmoid_derivative(zlist[-1])
-                    nabla_b[-1] = delta_l
-                    nabla_w[-1] = delta_l @ alist[-1].T
+                Xi = X[batch]
+                yi = y[batch,np.newaxis]
+                # Feedforward >>>
+                a = Xi
+                A = [a]
+                for w, b in zip(self.weights, self.biases):
+                    a = self.sigmoid(a @ w + b)
+                    A.append(a)
+                # <<< Feedforward
+                # Backpropagation >>>
+                # Last layer, delta_L:
+                delta_l = self.d_cost(A[-1], yi) * (A[-1] * (1 - A[-1]))
+                nabla_b[-1] = np.mean(delta_l, axis=0)
+                nabla_w[-1] = A[-2].T @ delta_l
+                # Second to last down to first layer
+                for l in range(2, self.num_layers):
+                    delta_l = (delta_l @ self.weights[-l + 1].T) * (A[-l] * (1 - A[-l]))
+                    nabla_b[-l] += eta*np.mean(delta_l, axis=0)
+                    nabla_w[-l] += eta*A[-l - 1].T @ delta_l
+                # Update weights and biases
+                self.weights -= nabla_w / batch_size - reg*self.weights
+                self.biases -= nabla_b / batch_size
+                # <<< Backpropagation
 
-                    # Second to last down to first layer
-                    for l in range(2, self.num_layers):
-                        delta_l = (
-                            self.weights[-l + 1].T @ delta_l
-                        ) * self.sigmoid_derivative(zlist[-l])
-                        delta_l *= eta  # results in the mean gradient (actually eta/batch_size)
-                        nabla_b[-l] += delta_l
-                        nabla_w[-l] += delta_l @ alist[-l - 1].T
-                    # <<< Backpropagation
-                # <<< Mini batch
-                # Update weights and biases. Note: nabla_b and w already
-                # contains mean(gradient) for that mini batch
-                self.weights -= nabla_w
-                self.biases -= nabla_b
-            # Evaluate Cost function
-
+            self.print_progress((e + 1) / epochs)
             # <<< Epoch
-
-            self.print_progress(e / epochs)
 
         # weights and biases are now trained
         return None
 
     def predict(self, X):
         y_pred = np.zeros(X.shape[0])
+        a = X
+        for w, b in zip(self.weights, self.biases):
+            a = self.sigmoid(a @ w + b)
 
-        for i, xi in enumerate(X):
-            f = xi[:, np.newaxis]
-            for w, b in zip(self.weights, self.biases):
-                z = w @ f + b
-                f = self.sigmoid(z)
-            y_pred[i] = float(f)
-
-        y_pred[y_pred < 0.5] = 0
-        y_pred[y_pred >= 0.5] = 1
-
+        y_pred[a.reshape(-1,) < 0.5] = 0
+        y_pred[a.reshape(-1,) >= 0.5] = 1
         return y_pred
 
     def load_weights_and_biases(self, layers):
@@ -188,6 +149,7 @@ class NeuralNetwork:
             List of nodes per layers, including input and output layer.
         """
         path = "./data/NN"
+        self.layers = layers
         for l in layers:
             path += "_" + str(l)
         if not os.path.exists(path):
@@ -222,8 +184,10 @@ class NeuralNetwork:
         print("\tWeights and biases saved in " + path + "/")
 
     def print_progress(self, progress):
-        """Prints a progress bar and percentage towards completion during
-        training in SGD"""
+        """
+        Prints a progress bar and percentage towards completion during
+        training in SGD
+        """
         sys.stdout.flush()
         width = 30
         status = ""

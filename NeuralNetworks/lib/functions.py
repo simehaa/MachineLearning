@@ -1,24 +1,30 @@
 import numpy as np
-def LogReg_classification(X_train, y_train, X_test, y_test, runs, epochs):
-    print("Logistic Regression\n")
-    runs = 10
-    epochs = 100
-    print(f"\tAveraging over {runs} runs with {epochs} epochs")
-    res = np.zeros((runs, 4))
-    acc = np.zeros(runs)
-    for i in range(runs):
-        clf = SGDClassification(batch_size=100, epochs=epochs)
-        clf.fit(X_train, y_train)
-        y_pred = clf.predict(X_test)
-        res[i, :] = accuracy(y_test, y_pred)
-        acc[i] = 100 * (res[i, 0] + res[i, 1]) / (res[i, 2] + res[i, 3])
-    total_ones = np.sum(y_test == 1)
-    total_zeros = np.sum(y_test == 0)
-    print(f"\tAverage correct ones  : {np.mean(res[:,0])} / {total_ones}")
-    print(f"\tAverage correct zeros : {np.mean(res[:,1])} / {total_zeros}")
-    print(
-        f"\tAccuracy over {runs} runs : {np.mean(acc):2.2f} +/- {np.std(acc):2.2f} %\n"
-    )
+import matplotlib.pyplot as plt
+from scikitplot.helpers import cumulative_gain_curve
+from sklearn.metrics import auc
+
+
+def generate_franke_data(N=10000, noise=0.5, test_size=0.2):
+    x1 = np.random.uniform(0, 1, N)
+    x2 = np.random.uniform(0, 1, N)
+    X = np.column_stack((x1, x2))
+    y = franke_function(x1, x2) + np.random.normal(0, noise, N)
+    return X, y
+
+
+def franke_function(x, y):
+    """
+    The Franke function f(x, y). The inputs are elements or vectors with
+    elements in the domain of [0, 1].
+    """
+    if np.shape(x) != np.shape(y):
+        raise ValueError("x and y must be of same shape!")
+
+    term = 0.75 * np.exp(-(0.25 * (9 * x - 2) ** 2) - 0.25 * ((9 * y - 2) ** 2))
+    term += 0.75 * np.exp(-((9 * x + 1) ** 2) / 49.0 - 0.1 * (9 * y + 1))
+    term += 0.5 * np.exp(-(9 * x - 7) ** 2 / 4.0 - 0.25 * ((9 * y - 3) ** 2))
+    term += -0.2 * np.exp(-(9 * x - 4) ** 2 - (9 * y - 7) ** 2)
+    return term
 
 
 def accuracy(y_test, y_pred):
@@ -52,3 +58,57 @@ def print_accuracy(correct_ones, correct_zeros, total_ones, total_zeros):
     print(f"\tCorrect ones  : {correct_ones} / {total_ones}")
     print(f"\tCorrect zeros : {correct_zeros} / {total_zeros}")
     print(f"\tOverall accuracy : {acc*100:2.2f} %\n")
+
+
+def roc_curve(
+    y_true,
+    y_probas,
+    title="Cumulative Gains Curve",
+    title_fontsize="large",
+    text_fontsize="medium",
+    ax=None,
+    figsize=None,
+    show=False,
+):
+    """
+    Plot the ROC-curve diagrams
+    Modified code from scikitplot.helpers.plot_cumulative_gain
+    """
+
+    y_true = np.array(y_true)
+    y_probas = np.array(y_probas)
+
+    classes = np.unique(y_true)
+    if len(classes) != 2:
+        raise ValueError(
+            "Cannot calculate Cumulative Gains for data with "
+            "{} category/ies".format(len(classes))
+        )
+
+    y_probas = y_probas.reshape((len(y_probas), 1))
+    y_probas = np.concatenate((np.zeros((len(y_probas), 1)), y_probas), axis=1)
+
+    percentages, gains2 = cumulative_gain_curve(y_true, y_probas[:, 1], classes[1])
+    ones = np.sum(y_true)
+    tot = len(y_true)
+    best_curve_x = [0, ones, tot]
+    best_curve_y = [0, ones, ones]
+    bottom_area = tot*ones / 2
+    best_curve_area = auc(best_curve_x, best_curve_y) - bottom_area
+    model_curve_area = auc(percentages*tot, gains2*ones) - bottom_area
+    area_ratio = model_curve_area / best_curve_area
+    if show:
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        ax.plot(percentages*tot, gains2*ones, lw=2, label="Model")
+        ax.plot(best_curve_x, best_curve_y, lw=2, label="Best curve")
+        ax.set_xlim([0.0, tot*1.0])
+        ax.set_ylim([0.0, ones*1.2])
+        ax.plot([0, tot], [0, ones], "k--", lw=2, label="Baseline")
+        ax.set_xlabel("Number of total data", fontsize=text_fontsize)
+        ax.set_ylabel("Cumulative number of target data", fontsize=text_fontsize)
+        ax.tick_params(labelsize=text_fontsize)
+        ax.grid()
+        ax.legend(loc=4, fontsize=text_fontsize)
+        plt.show()
+
+    return area_ratio

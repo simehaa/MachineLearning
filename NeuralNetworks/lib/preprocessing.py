@@ -63,6 +63,7 @@ def preprocess_raw_data(test_size=0.2):
     dataframe = pd.read_excel("./data/raw/defaulted_cc-clients.xls")
     # 0th row and column are dataframe headers and indices
     data = dataframe.to_numpy()[1:, 1:]
+    N = data.shape[0]
 
     # ----- Remove Outliers -----
     # Identify indices with correct values, then reassign the data
@@ -83,18 +84,38 @@ def preprocess_raw_data(test_size=0.2):
         repayment_status = np.logical_and(data[:, i] >= -2, data[:, i] <= 9)
         data = data[repayment_status]
 
+    X_repayment_status_minus_two = np.zeros((data.shape[0], 6))
+    X_repayment_status_minus_one = np.zeros((data.shape[0], 6))
+    X_repayment_status_minus_two[data[:, 5:11] == -2] = 1.0
+    X_repayment_status_minus_one[data[:, 5:11] == -1] = 1.0
+    data[:, 5:11][np.logical_or(data[:, 5:11] == -2, data[:, 5:11] == -1)] = 0
+
+    print(f"\t{N -data.shape[0]} outliers removed.")
+
     # ----- Split data set -----
     X_categorical = data[:, 1:4]
     X_continuous = np.concatenate((data[:, 0:1], data[:, 4:-1]), axis=1)
     y = data[:, -1]
 
     # ----- One Hot Encoding for categorical columns -----
-    categories = [[1, 2], [1, 2, 3, 4], [1, 2, 3]]
-    enc = OneHotEncoder(handle_unknown="error", categories=categories)
+    # categories = [[1, 2], [1, 2, 3, 4], [1, 2, 3]]
+    enc = OneHotEncoder(handle_unknown="error", categories="auto")
     preprocessor = ColumnTransformer(transformers=[("onehot", enc, [0, 1, 2])])
     X_one_hot_encoded = preprocessor.fit_transform(X_categorical)
-    X = np.concatenate((X_one_hot_encoded, X_continuous), axis=1)
-    p = X_one_hot_encoded.shape[1]  # index that separates OneHot and continuous colums
+    X = np.concatenate(
+        (
+            X_one_hot_encoded,
+            X_repayment_status_minus_two,
+            X_repayment_status_minus_one,
+            X_continuous,
+        ),
+        axis=1,
+    )
+    p = X_one_hot_encoded.shape[1]
+    p += X_repayment_status_minus_one.shape[1]
+    p += X_repayment_status_minus_two.shape[
+        1
+    ]  # index that separates OneHot and continuous colums
 
     # ----- Split of training and test -----
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
@@ -128,40 +149,53 @@ def preprocess_raw_data(test_size=0.2):
 X-data after preprocessing (29 columns)
 ---------------------------------------
 
-        One Hot Encoded Columns
+        One Hot Encoded Columns (1 denoted in parenthesess)
         -----------------------
-    0, SEX: Gender (1=male)
-    1, SEX: Gender (1=female)
-    2, EDUCATION: (1=graduate school)
-    3, EDUCATION: (1=university)
-    4, EDUCATION: (1=high school)
-    5, EDUCATION: (1=others)
-    6, MARRIAGE: Marital status (1=married)
-    7, MARRIAGE: Marital status (1=single)
-    8, MARRIAGE: Marital status (1=others)
+    0, SEX: Gender (male)
+    1, SEX: Gender (female)
+    2, EDUCATION: (graduate school)
+    3, EDUCATION: (university)
+    4, EDUCATION: (high school)
+    5, EDUCATION: (others)
+    6, MARRIAGE: Marital status (1married)
+    7, MARRIAGE: Marital status (1single)
+    8, MARRIAGE: Marital status (1others)
+    9, PAY_0: Repayment status in September, 2005 (status= -2)
+    10, PAY_2: Repayment status in August, 2005 (status= -2)
+    11, PAY_3: Repayment status in July, 2005 (status= -2)
+    12, PAY_4: Repayment status in June, 2005 (status= -2)
+    13, PAY_5: Repayment status in May, 2005 (status= -2)
+    14, PAY_6: Repayment status in April, 2005 (status= -2)
+    15, PAY_0: Repayment status in September, 2005 (status= -1)
+    16, PAY_2: Repayment status in August, 2005 (status= -1)
+    17, PAY_3: Repayment status in July, 2005 (status= -1)
+    18, PAY_4: Repayment status in June, 2005 (status= -1)
+    19, PAY_5: Repayment status in May, 2005 (status= -1)
+    20, PAY_6: Repayment status in April, 2005 (status= -1)
 
-        Scaled Columns, with mean=0, std=1
+
+        Scaled Columns range [0, 1]
         ----------------------------------
-    9, LIMIT_BAL: Amount of given credit in NT dollars
-    10, AGE: Scaled age
-    11, PAY_0: Repayment status in September, 2005
-    12, PAY_2: Repayment status in August, 2005
-    13, PAY_3: Repayment status in July, 2005
-    14, PAY_4: Repayment status in June, 2005
-    15, PAY_5: Repayment status in May, 2005
-    16, PAY_6: Repayment status in April, 2005
-    17, BILL_AMT1: Amount of bill statement in September, 2005
-    18, BILL_AMT2: Amount of bill statement in August, 2005
-    19, BILL_AMT3: Amount of bill statement in July, 2005
-    20, BILL_AMT4: Amount of bill statement in June, 2005
-    21, BILL_AMT5: Amount of bill statement in May, 2005
-    22, BILL_AMT6: Amount of bill statement in April, 2005
-    23, PAY_AMT1: Amount of previous payment in September, 2005
-    24, PAY_AMT2: Amount of previous payment in August, 2005
-    25, PAY_AMT3: Amount of previous payment in July, 2005
-    26, PAY_AMT4: Amount of previous payment in June, 2005
-    27, PAY_AMT5: Amount of previous payment in May, 2005
-    28, PAY_AMT6: Amount of previous payment in April, 2005
+    21, LIMIT_BAL: Amount of given credit in NT dollars
+    22, AGE: Scaled age
+    23, PAY_0: Repayment status in September, 2005
+    24, PAY_2: Repayment status in August, 2005
+    25, PAY_3: Repayment status in July, 2005
+    26, PAY_4: Repayment status in June, 2005
+    27, PAY_5: Repayment status in May, 2005
+    28, PAY_6: Repayment status in April, 2005
+    29, BILL_AMT1: Amount of bill statement in September, 2005
+    30, BILL_AMT2: Amount of bill statement in August, 2005
+    31, BILL_AMT3: Amount of bill statement in July, 2005
+    32, BILL_AMT4: Amount of bill statement in June, 2005
+    33, BILL_AMT5: Amount of bill statement in May, 2005
+    34, BILL_AMT6: Amount of bill statement in April, 2005
+    35, PAY_AMT1: Amount of previous payment in September, 2005
+    36, PAY_AMT2: Amount of previous payment in August, 2005
+    37, PAY_AMT3: Amount of previous payment in July, 2005
+    38, PAY_AMT4: Amount of previous payment in June, 2005
+    39, PAY_AMT5: Amount of previous payment in May, 2005
+    40, PAY_AMT6: Amount of previous payment in April, 2005
 
 Y-data after preprocessing (1 column vector)
 --------------------------------------------

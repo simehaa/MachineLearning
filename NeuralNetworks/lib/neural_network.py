@@ -1,6 +1,27 @@
 import numpy as np
 import sys
 import os
+from sklearn.model_selection import train_test_split
+
+
+class CrossEntropy:
+    @staticmethod
+    def function(a, y):
+        return np.sum(-y * np.log(a) - (1 - y) * np.log(1 - a))
+
+    @staticmethod
+    def derivative(a, y):
+        return a - y
+
+
+class MSE:
+    @staticmethod
+    def function(a, y):
+        return np.mean((a - y) ** 2)
+
+    @staticmethod
+    def derivative(a, y):
+        return a - y
 
 
 class NeuralNetwork:
@@ -39,25 +60,14 @@ class NeuralNetwork:
     def __init__(self):
         pass
 
-    def d_cost(self, f, y):
-        """Same for MSE and Xentropy"""
-        return f - y
-
     def sigmoid(self, z):
         """Sigmoid function as activation function"""
         return 1 / (1 + np.exp(-z))
 
-    def SGD(
-        self,
-        X,
-        y,
-        layers,
-        epochs=50,
-        batch_size=100,
-        eta=0.01,
-        cost_function="xentropy",
-        reg=1e-6
-    ):
+    def sigmoid_derivative(selv, sigmoid):
+        return sigmoid * (1 - sigmoid)
+
+    def SGD(self, X, y, layers, cost, epochs=50, batch_size=100, eta=0.01, reg=1e-6):
         """
         Info
 
@@ -77,6 +87,7 @@ class NeuralNetwork:
             Size of each mini batch. The algorithm does one mini batch at
             a time and averages over those results. Larger batch
         """
+        X, X_vali, y, y_vali = train_test_split(X, y, test_size=0.10)
         n, p = X.shape
         self.layers = layers
         self.num_layers = len(layers)
@@ -84,22 +95,27 @@ class NeuralNetwork:
             [np.random.normal(0, 0.5, (i, j)) for i, j in zip(layers[:-1], layers[1:])]
         )
         self.biases = np.array([np.zeros(j) for j in layers[1:]])
+        self.vali_accuracy = np.zeros(epochs)
         num_batches = int(n / batch_size)
         batches = np.random.permutation(num_batches * batch_size)
         batches = batches.reshape(num_batches, batch_size)
-        nabla_b = np.array([np.zeros(b.shape) for b in self.biases], dtype=np.ndarray)
-        nabla_w = np.array([np.zeros(w.shape) for w in self.weights], dtype=np.ndarray)
         print(f"\tTraining Neural Network with {epochs} epochs")
-        self.print_progress(0)
-
+        self.printprogress(0)
+        # Loop over epochs
         for e in range(epochs):
             # Epoch >>>
             batches = np.random.permutation(n)
+            nabla_b = np.array(
+                [np.zeros(b.shape) for b in self.biases], dtype=np.ndarray
+            )
+            nabla_w = np.array(
+                [np.zeros(w.shape) for w in self.weights], dtype=np.ndarray
+            )
             # loop over all mini batches
             for b in range(num_batches):
                 batch = batches[batch_size * b : batch_size * (b + 1)]
                 Xi = X[batch]
-                yi = y[batch,np.newaxis]
+                yi = y[batch, np.newaxis]
                 # Feedforward >>>
                 a = Xi
                 A = [a]
@@ -109,33 +125,40 @@ class NeuralNetwork:
                 # <<< Feedforward
                 # Backpropagation >>>
                 # Last layer, delta_L:
-                delta_l = self.d_cost(A[-1], yi) * (A[-1] * (1 - A[-1]))
+                delta_l = cost.derivative(A[-1], yi) * self.sigmoid_derivative(A[-1])
                 nabla_b[-1] = np.mean(delta_l, axis=0)
                 nabla_w[-1] = A[-2].T @ delta_l
                 # Second to last down to first layer
                 for l in range(2, self.num_layers):
-                    delta_l = (delta_l @ self.weights[-l + 1].T) * (A[-l] * (1 - A[-l]))
-                    nabla_b[-l] += eta*np.mean(delta_l, axis=0)
-                    nabla_w[-l] += eta*A[-l - 1].T @ delta_l
-                # Update weights and biases
-                self.weights -= nabla_w / batch_size - reg*self.weights
-                self.biases -= nabla_b / batch_size
-                # <<< Backpropagation
-
-            self.print_progress((e + 1) / epochs)
+                    delta_l = (
+                        delta_l @ self.weights[-l + 1].T
+                    ) * self.sigmoid_derivative(A[-l])
+                    nabla_b[-l] += np.mean(delta_l, axis=0)
+                    nabla_w[-l] += A[-l - 1].T @ delta_l
+                    # self.loss[e] += cost.function(A[-1], yi)
+                # Update weights and biases (L2 regularization)
+                self.weights = (
+                    self.weights * (1 - eta * reg / n) - eta * nabla_w / batch_size
+                )
+                self.biases = self.biases - eta * nabla_b / batch_size
+            # <<< Backpropagation
+            y_pred = self.predict(X_vali)
+            self.vali_accuracy[e] = np.sum(y_pred == y_vali) / y_vali.shape[0]
+            self.printprogress((e + 1) / epochs)
             # <<< Epoch
 
         # weights and biases are now trained
         return None
 
-    def predict(self, X):
+    def predict(self, X, binary=True):
         y_pred = np.zeros(X.shape[0])
         a = X
         for w, b in zip(self.weights, self.biases):
             a = self.sigmoid(a @ w + b)
-
-        y_pred[a.reshape(-1,) < 0.5] = 0
-        y_pred[a.reshape(-1,) >= 0.5] = 1
+        y_pred = a.reshape(-1)
+        if binary:
+            y_pred[y_pred >= 0.5] = 1
+            y_pred[y_pred < 0.5] = 0
         return y_pred
 
     def load_weights_and_biases(self, layers):
@@ -183,10 +206,9 @@ class NeuralNetwork:
             np.savez(os.path.join(bpath, str(i) + ".npz"), b=b)
         print("\tWeights and biases saved in " + path + "/")
 
-    def print_progress(self, progress):
+    def printprogress(self, progress):
         """
-        Prints a progress bar and percentage towards completion during
-        training in SGD
+        Prints a progress bar during the iterative algorithm.
         """
         sys.stdout.flush()
         width = 30

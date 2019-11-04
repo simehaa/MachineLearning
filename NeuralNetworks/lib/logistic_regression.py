@@ -73,31 +73,31 @@ class SGDClassification:
                 raise ValueError(
                     "beta must be of the same shape as number of columns in X"
                 )
-
-        num_batches = int(N / self.batch_size)
-        batches = np.random.permutation(num_batches * self.batch_size)
-        batches = batches.reshape(num_batches, self.batch_size)
+        batch_size = self.batch_size
+        num_batches = int(N / batch_size)
         learning_rate = lambda t: 1 / (t + 10)
-        self.bias = (np.random.random() - 0.5) * 0.2  # in [- 0.1, + 0.1]
+        self.bias = 0
 
         self.printprogress(0)
         # iterative loop over epochs
         for t in range(self.epochs):
             # loop over mini batches
-            for _batch in range(num_batches):
+            batches = np.random.permutation(N)
+            for b in range(num_batches):
                 # pick a random batch, num_batches times
-                random_batch_number = np.random.randint(num_batches)
-                i = batches[random_batch_number, :]  # random batch indices
-                p_new = self._update_p(X[i, :])
-                diff = p_new - y[i]
-                self.bias -= np.mean(diff)
-                self.beta -= learning_rate(t) * X[i, :].T @ diff
+                batch = batches[batch_size * b : batch_size * (b + 1)]
+                Xi = X[batch, :]
+                yi = y[batch].reshape(-1, )
+                p_new = self._update_p(Xi)
+                diff = p_new - yi
+                self.bias -= learning_rate(t) * np.mean(diff) / batch_size
+                self.beta -= learning_rate(t) * Xi.T @ diff / batch_size
 
             self.printprogress((t + 1) / self.epochs)
 
         return None  # self.beta is now updated and predict() can be called
 
-    def predict(self, Xt):
+    def predict(self, Xt, binary=False):
         """
         Provide a prediction for some data X.
 
@@ -113,8 +113,8 @@ class SGDClassification:
         """
         if Xt.shape[1] != self.features:
             raise ValueError(f"Xt must have {self.features} columns!")
-        else:
-            y_pred = self._update_p(Xt)
+        y_pred = self._update_p(Xt)
+        if binary:
             y_pred[y_pred < 0.5] = 0
             y_pred[y_pred >= 0.5] = 1
         return y_pred
@@ -137,9 +137,12 @@ class SGDClassification:
         """
         p_new = 1.0 / (1 + np.exp(-Xi @ self.beta + self.bias))  # sigmoid
         # p_new = np.tanh(Xi @ self.beta + self.bias)  # tanh
-        return p_new
+        return p_new.reshape(-1, )
 
     def printprogress(self, progress):
+        """
+        Prints a progress bar during the iterative algorithm.
+        """
         sys.stdout.flush()
         width = 30
         status = ""

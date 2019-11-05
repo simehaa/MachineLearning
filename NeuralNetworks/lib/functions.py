@@ -1,5 +1,7 @@
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import auc
 from sklearn.model_selection import train_test_split
@@ -7,6 +9,7 @@ from scikitplot.helpers import cumulative_gain_curve
 from lib.neural_network import *
 from lib.logistic_regression import *
 import seaborn as sns
+import tensorflow as tf
 
 
 def LogReg(X_train, y_train, X_test, y_test, epochs):
@@ -59,12 +62,13 @@ def LogReg(X_train, y_train, X_test, y_test, epochs):
 
 def NN_classification(X_train, y_train, X_test, y_test):
     print("Neural Network\n")
+    layers = [41, 100, 75, 50, 34, 1]
+    cost = CrossEntropy()
+    act_fns = ["sigmoid", "sigmoid", "sigmoid", "sigmoid", "sigmoid"]
+    NN = NeuralNetwork(layers=layers, cost=cost, act_fns=act_fns)
 
     epochs = 10
     batch_size = 100
-    layers = [41, 100, 75, 50, 34, 1]
-    cost = CrossEntropy()
-    NN = NeuralNetwork()
     learning_rates = np.logspace(-3, 0, 4)
     regular_params = np.logspace(-1, -6, 6)
     area_ratios_tr = np.zeros((4, 6))
@@ -73,14 +77,8 @@ def NN_classification(X_train, y_train, X_test, y_test):
     for i, eta in enumerate(learning_rates):
         for j, reg in enumerate(regular_params):
             NN.SGD(
-                X_train,
-                y_train,
-                layers=layers,
-                cost=cost,
-                epochs=epochs,
-                batch_size=batch_size,
-                eta=eta,
-                reg=reg,
+                X_train, y_train, validation_data=(X_test, y_test),
+                epochs=epochs, batch_size=batch_size, eta=eta, reg=reg
             )
             area_ratio_tr = roc_curve(y_train, NN.predict(X_train, binary=False))
             area_ratio_te = roc_curve(y_test, NN.predict(X_test, binary=False))
@@ -120,14 +118,8 @@ def NN_classification(X_train, y_train, X_test, y_test):
     # Lift chart on test set with best eta and reg_param:
     print("\n\tEvaluating error rates and creating ROC curve")
     NN.SGD(
-        X_train,
-        y_train,
-        layers=layers,
-        cost=cost,
-        epochs=epochs,
-        batch_size=batch_size,
-        eta=eta_te,
-        reg=reg_te,
+        X_train, y_train, validation_data=(X_test, y_test),
+        epochs=epochs, batch_size=batch_size, eta=eta_te, reg=reg_te
     )
     # Error rates
     y_pred = NN.predict(X_train, binary=True)
@@ -153,28 +145,94 @@ def NN_classification(X_train, y_train, X_test, y_test):
     """
 
 
-def NN_regression(X_train, y_train, X_test, y_test):
-    layers = [2, 100, 75, 50, 34, 1]
-    cost = MSE()
-    act_fns = ["sigmoid","sigmoid","sigmoid","sigmoid","unity"]
-    NN = NeuralNetworkRegr(
-        layers=layers,
-        cost=cost,
-        act_fns=act_fns
+def tensorflow(X_train, y_train, X_test, y_test):
+    model = tf.keras.models.Sequential(
+        [
+            tf.keras.layers.Dense(30, activation="relu"),
+            tf.keras.layers.Dense(16, activation="relu"),
+            tf.keras.layers.Dense(1, activation="sigmoid")
+            # tf.keras.layers.Dropout(0.2),
+        ]
+    )  # try two outputs and softmax (well taylored for )
+    model.compile(
+        optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
+    )
+    model.fit(
+        X_train, y_train, epochs=50, batch_size=100, validation_data=(X_test, y_test)
     )
 
-    epochs = 10
+    y_pred = model.predict(X_test)
+    area_ratio = roc_curve(y_test, y_pred, show=True)
+    y_pred[y_pred >= 0.5] = 1
+    y_pred[y_pred < 0.5] = 0
+    err_rate = 1 - (np.sum(y_pred == y_test) / len(y_test))
+    print(err_rate, area_ratio)
+    return None
+
+
+def NN_regression(X_train, y_train, X_test, y_test):
+    cost = MSE()
+    layers = [2, 40, 40, 20, 1]
+    act_fns = ["sigmoid", "sigmoid", "sigmoid", "unity"]
+    NN = NeuralNetwork(layers=layers, cost=cost, act_fns=act_fns)
+    epochs = 100
     batch_size = 100
-    eta = 0.1
-    reg = 0.1
-    NN.SGD(
-        X_train,
-        y_train,
-        epochs=epochs,
-        batch_size=batch_size,
-        eta=eta,
-        reg=reg
+    learning_rates = np.logspace(-2, -1, 2)
+    regular_params = np.logspace(-1, -2, 2)
+    r2_scores = np.zeros((2, 2))
+
+    for i, eta in enumerate(learning_rates):
+        for j, reg in enumerate(regular_params):
+            NN.SGD(
+                X_train, y_train, validation_data=(X_test, y_test),
+                epochs=epochs, batch_size=batch_size, eta=eta, reg=reg
+            )
+            r2_scores[i, j] = r2_score(y_test, NN.predict(X_test))
+
+    fig, ax = plt.subplots(1, 1)
+    sns.heatmap(
+        r2_scores,
+        square=True,
+        annot=True,
+        center=0,
+        cmap="YlGnBu",
+        xticklabels=[f"{i:1g}" for i in regular_params],
+        yticklabels=[f"{i:1g}" for i in learning_rates],
     )
+    bottom, top = ax.get_ylim()
+    ax.set_ylim(bottom + 0.5, top - 0.5)
+    plt.title(r"$R^2$ scores")
+    plt.xlabel("L2 Regularization parameter")
+    plt.ylabel("Learning rate")
+    plt.show()
+
+    # Plot of franke function and prediction on mesh
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_xlabel(r"$x_1$")
+    ax.set_ylabel(r"$x_2$")
+    ax.set_zlabel("y")
+    ax.set_zlim(-0.5, 1.5)
+    # predict a mesh of data
+    l = np.linspace(0, 1, 101)
+    x1_mesh, x2_mesh = np.meshgrid(l, l)
+    x1_flat, x2_flat = x1_mesh.flatten(), x2_mesh.flatten()
+    y_pred = NN.predict(np.column_stack((x1_flat, x2_flat)))
+    y_pred_mesh = np.reshape(y_pred, x1_mesh.shape)
+    func_mesh = franke_function(x1_flat, x2_flat).reshape(x1_mesh.shape)
+    surface_pred = ax.plot_surface(x1_mesh, x2_mesh, y_pred_mesh, cmap=mpl.cm.coolwarm, alpha=.7)
+    surface_true = ax.plot_surface(x1_mesh, x2_mesh, func_mesh, alpha=.3)
+    fig.colorbar(surface_pred, shrink=0.5)
+    plt.show()
+
+
+def r2_score(y, y_pred):
+    """Evaluate the R2 (R squared) score for y, y_pred"""
+    y_mean = np.mean(y)
+    RSS = np.sum((y - y_pred)**2) # residual sum of squares
+    TSS = np.sum((y - y_mean)**2) # total sum of squares
+    r2 = 1 - RSS/TSS
+    return r2
 
 
 def plot_confusion(y, y_pred):
@@ -184,16 +242,13 @@ def plot_confusion(y, y_pred):
     plt.show()
 
 
-def generate_franke_data(N=10000, noise=.5, test_size=.2):
+def generate_franke_data(N=10000, noise=0.5):
     np.random.seed(13)
     x1 = np.random.uniform(0, 1, N)
     x2 = np.random.uniform(0, 1, N)
     X = np.column_stack((x1, x2))
     y = franke_function(x1, x2) + np.random.normal(0, noise, N)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
-    np.savez("./data/franke/train_data.npz", X=X_train, y=y_train)
-    np.savez("./data/franke/test_data.npz", X=X_test, y=y_test)
-    return None
+    return X, y
 
 
 def franke_function(x, y):

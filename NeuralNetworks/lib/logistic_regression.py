@@ -87,7 +87,7 @@ class SGDClassification:
                 # pick a random batch, num_batches times
                 batch = batches[batch_size * b : batch_size * (b + 1)]
                 Xi = X[batch, :]
-                yi = y[batch].reshape(-1, )
+                yi = y[batch].reshape(-1)
                 p_new = self._update_p(Xi)
                 diff = p_new - yi
                 self.bias -= learning_rate(t) * np.mean(diff) / batch_size
@@ -137,7 +137,7 @@ class SGDClassification:
         """
         p_new = 1.0 / (1 + np.exp(-Xi @ self.beta + self.bias))  # sigmoid
         # p_new = np.tanh(Xi @ self.beta + self.bias)  # tanh
-        return p_new.reshape(-1, )
+        return p_new.reshape(-1)
 
     def printprogress(self, progress):
         """

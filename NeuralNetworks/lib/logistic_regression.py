@@ -56,6 +56,8 @@ class SGDClassification:
 
         beta : array, shape(features, )
             Initial guess for parameter vector, size num_features.
+            If not provided, an inital guess with beta[i], randomly chosen
+            in the range [-0.7, 0.7] is generated.
 
         Returns
         -------

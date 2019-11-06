@@ -1,10 +1,11 @@
 import numpy as np
 import sys
 import os
-from sklearn.model_selection import train_test_split
 
 
 class CrossEntropy:
+    """May be used as cost function in the NeuralNetwork class. Both the function
+    itself and the derivative are provided as methods."""
     @staticmethod
     def function(a, y):
         return np.sum(-y * np.log(a) - (1 - y) * np.log(1 - a))
@@ -15,6 +16,8 @@ class CrossEntropy:
 
 
 class MSE:
+    """May be used as cost function in the NeuralNetwork class. Both the function
+    itself and the derivative are provided as methods."""
     @staticmethod
     def function(a, y):
         return np.mean((a - y) ** 2)
@@ -34,20 +37,38 @@ def sigmoid_derivative(s):
     return s * (1 - s)
 
 
-def unity(z):
+def linear(z):
+    """Linear activation function"""
     return z
 
 
-def unity_derivative(z):
+def linear_derivative(z):
+    """Linear activation function derivative"""
     return 1
 
 
 def tanh(z):
+    """tanh as activation function"""
     return np.tanh(z)
 
 
 def tanh_derivative(t):
+    """tanh derivative, takes tanh as input"""
     return 1 - t * t
+
+
+def relu(z):
+    """ReLU activation function"""
+    a = np.zeros(z.shape)
+    a[z >= 0] = z[z >= 0]
+    return a
+
+
+def relu_derivative(z):
+    """ReLU derivative"""
+    a = np.zeros(z.shape)
+    a[z >= 0] = 1
+    return a
 
 
 class NeuralNetwork:
@@ -95,16 +116,19 @@ class NeuralNetwork:
             if a == "sigmoid":
                 self.act.append(sigmoid)
                 self.d_act.append(sigmoid_derivative)
-            elif a == "unity":
-                self.act.append(unity)
-                self.d_act.append(unity_derivative)
+            elif a == "linear":
+                self.act.append(linear)
+                self.d_act.append(linear_derivative)
             elif a == "tanh":
                 self.act.append(tanh)
                 self.d_act.append(tanh_derivative)
+            elif a == "relu":
+                self.act.append(relu)
+                self.d_act.append(relu_derivative)
             else:
                 raise ValueError(a + " is not implemented as an activation function.")
 
-    def SGD(self, X, y, validation_data, epochs=50, batch_size=100, eta=0.01, reg=1e-6):
+    def SGD(self, X, y, validation_data, epochs=50, batch_size=100, eta=0.01, reg=1e-6, save_frames=False):
         """
         Info
 
@@ -180,12 +204,31 @@ class NeuralNetwork:
                 self.biases = self.biases - eta * nabla_b / batch_size
             # <<< Backpropagation
             self.printprogress((e + 1) / epochs, e)
+            if save_frames:
+                np.savez("./data/frames/frame" + str(e) + ".npz", y=self.predict(self.X_test))
             # <<< Epoch
         print("\n")
         # weights and biases are now trained
         return None
 
     def predict(self, X, binary=False):
+        """
+        Evaluate output y, given X. Essentially the feed forward algorithm.
+
+        Parameters
+        ----------
+        X : array, shape(N, p)
+            Input layer with N data points and p features.
+
+        binary : bool
+            If True, the output y will convert all elements above 0.5 to 1 and
+            all elements below 0.1 to 0, resulting in binary outputs.
+
+        Returns
+        -------
+        y_pred : array, shape(N, )
+            The output vector.
+        """
         y_pred = np.zeros(X.shape[0])
         a = X
         for w, b, fn in zip(self.weights, self.biases, self.act):
@@ -202,6 +245,7 @@ class NeuralNetwork:
         """
         sys.stdout.flush()
         width = 30
+        y = self.y_test
         cost = self.cost.function(self.predict(self.X_test), self.y_test)
         self.cost_arr[epoch] = cost
         bl = "#"

@@ -1,7 +1,7 @@
 import numpy as np
 from lib.functions import *
-
 # from lib.preprocessing import *
+np.random.seed(13)
 
 
 def main_classification():
@@ -20,9 +20,12 @@ def main_classification():
 
 def main_regression():
     # ----- Regression, Franke Function -----
-    X_train, y_train = generate_franke_data(N=10000, noise=.5)
-    X_test, y_test = generate_franke_data(N=5000, noise=.5)
-    NN_regression(X_train, y_train, X_test, y_test)
+    X_train, y_train = generate_franke_data(N=30000, noise=.3)
+    X_test, y_test = generate_franke_data(N=10000, noise=.3)
+
+    # LinReg(X_train, y_train, X_test, y_test)
+    # NN_regression(X_train, y_train, X_test, y_test)
+    animate_franke(X_train, y_train, X_test, y_test, epochs=100)
 
 
 if __name__ == "__main__":

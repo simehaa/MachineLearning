@@ -2,14 +2,20 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.animation as animation
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import auc
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import PolynomialFeatures
 from scikitplot.helpers import cumulative_gain_curve
-from lib.neural_network import *
-from lib.logistic_regression import *
 import seaborn as sns
 import tensorflow as tf
+
+from lib.neural_network import *
+from lib.logistic_regression import *
+from lib.linear_regression import *
+
 
 
 def LogReg(X_train, y_train, X_test, y_test, epochs):
@@ -92,7 +98,6 @@ def NN_classification(X_train, y_train, X_test, y_test):
             ax=ax,
             square=True,
             annot=True,
-            center=0,
             cmap="YlGnBu",
             xticklabels=[f"{i:1g}" for i in regular_params],
             yticklabels=[f"{i:1g}" for i in learning_rates],
@@ -148,38 +153,34 @@ def NN_classification(X_train, y_train, X_test, y_test):
 def tensorflow(X_train, y_train, X_test, y_test):
     model = tf.keras.models.Sequential(
         [
-            tf.keras.layers.Dense(30, activation="relu"),
-            tf.keras.layers.Dense(16, activation="relu"),
-            tf.keras.layers.Dense(1, activation="sigmoid")
+            tf.keras.layers.Dense(100, activation="relu"),
+            tf.keras.layers.Dense(60, activation="relu"),
+            tf.keras.layers.Dense(1, activation="linear")
             # tf.keras.layers.Dropout(0.2),
         ]
     )  # try two outputs and softmax (well taylored for )
     model.compile(
-        optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
+        optimizer="adam", loss="mse", metrics=["r2"]
     )
     model.fit(
         X_train, y_train, epochs=50, batch_size=100, validation_data=(X_test, y_test)
     )
 
     y_pred = model.predict(X_test)
-    area_ratio = roc_curve(y_test, y_pred, show=True)
-    y_pred[y_pred >= 0.5] = 1
-    y_pred[y_pred < 0.5] = 0
-    err_rate = 1 - (np.sum(y_pred == y_test) / len(y_test))
-    print(err_rate, area_ratio)
-    return None
+    return y_pred
 
 
 def NN_regression(X_train, y_train, X_test, y_test):
     cost = MSE()
-    layers = [2, 40, 40, 20, 1]
-    act_fns = ["sigmoid", "sigmoid", "sigmoid", "unity"]
+    layers = [2, 100, 60, 1]
+    act_fns = ["tanh", "tanh", "linear"]
     NN = NeuralNetwork(layers=layers, cost=cost, act_fns=act_fns)
-    epochs = 100
+    epochs = 10
     batch_size = 100
-    learning_rates = np.logspace(-2, -1, 2)
-    regular_params = np.logspace(-1, -2, 2)
-    r2_scores = np.zeros((2, 2))
+    learning_rates = np.logspace(-2, -3, 2)
+    regular_params = np.logspace(-3, -1, 3)
+    r2_scores = np.zeros((2, 3))
+    epoch_arr = np.linspace(1, epochs, epochs)
 
     for i, eta in enumerate(learning_rates):
         for j, reg in enumerate(regular_params):
@@ -188,13 +189,19 @@ def NN_regression(X_train, y_train, X_test, y_test):
                 epochs=epochs, batch_size=batch_size, eta=eta, reg=reg
             )
             r2_scores[i, j] = r2_score(y_test, NN.predict(X_test))
+            plt.plot(epoch_arr, NN.cost_arr, label=rf"$\eta=${eta:g}, $\lambda=${reg:g}")
+
+    plt.ylabel("Cost function (MSE)")
+    plt.xlabel("Epochs")
+    plt.grid()
+    plt.legend(loc="best")
+    plt.show()
 
     fig, ax = plt.subplots(1, 1)
     sns.heatmap(
         r2_scores,
         square=True,
         annot=True,
-        center=0,
         cmap="YlGnBu",
         xticklabels=[f"{i:1g}" for i in regular_params],
         yticklabels=[f"{i:1g}" for i in learning_rates],
@@ -226,6 +233,45 @@ def NN_regression(X_train, y_train, X_test, y_test):
     plt.show()
 
 
+def LinReg(X_train, y_train, X_test, y_test):
+    regular_params = np.linspace(-13, -5, 9)
+    poly_degrees = np.linspace(7, 15, 9, dtype=np.uint32)
+    r2_scores = np.zeros((9, 9))
+
+    for i, reg in enumerate(regular_params):
+        for j, deg in enumerate(poly_degrees):
+            X = create_polynomial_design_matrix(X_train, deg)
+            Reg = LinearRegression(X, y_train)
+            mse, r2 = Reg.k_fold_cross_validation(5, "ridge", alpha=10**reg)
+            r2_scores[i, j] = r2
+
+    fig, ax = plt.subplots(1, 1)
+    sns.heatmap(
+        r2_scores,
+        square=True,
+        annot=True,
+        cmap="YlGnBu",
+        xticklabels=[f"{i:1g}" for i in poly_degrees],
+        yticklabels=[f"{i:1g}" for i in regular_params],
+    )
+    bottom, top = ax.get_ylim()
+    ax.set_ylim(bottom + 0.5, top - 0.5)
+    plt.title(r"$R^2$ scores")
+    plt.xlabel("Polynomial degree")
+    plt.ylabel("log10 (Regularization parameter)")
+    plt.show()
+
+
+def create_polynomial_design_matrix(X_data, degree):
+    """
+    X_data = [x_data  y_data]
+    Create polynomial design matrix on the form where columns are:
+    X = [1  x  y  x**2  xy  y**2  x**3  x**2y  ... ]
+    """
+    X = PolynomialFeatures(degree).fit_transform(X_data)
+    return X
+
+
 def r2_score(y, y_pred):
     """Evaluate the R2 (R squared) score for y, y_pred"""
     y_mean = np.mean(y)
@@ -243,7 +289,6 @@ def plot_confusion(y, y_pred):
 
 
 def generate_franke_data(N=10000, noise=0.5):
-    np.random.seed(13)
     x1 = np.random.uniform(0, 1, N)
     x2 = np.random.uniform(0, 1, N)
     X = np.column_stack((x1, x2))
@@ -353,3 +398,56 @@ def roc_curve(
         plt.show()
 
     return area_ratio
+
+
+def animate_franke(X_train, y_train, X_test, y_test, epochs=10):
+    plot_args = {'rstride': 1, 'cstride': 1, 'cmap':
+                 mpl.cm.coolwarm, 'linewidth': 0.01, 'antialiased': True,
+                 'shade': True, 'alpha': .35}
+    size = 50
+    l = np.linspace(0.001, 0.999, size)
+    x1_mesh, x2_mesh = np.meshgrid(l, l)
+    x1_flat, x2_flat = x1_mesh.flatten(), x2_mesh.flatten()
+    X_test = np.column_stack((x1_flat, x2_flat))
+    y_test = franke_function(x1_flat, x2_flat)
+
+    # NN setup
+    NN = NeuralNetwork(
+        layers=[2, 100, 60, 1], cost=MSE(),
+        act_fns=["tanh", "tanh", "linear"]
+    )
+    NN.SGD(
+        X_train, y_train, validation_data=(X_test, y_test),
+        epochs=epochs, batch_size=100, eta=1e-2, reg=1e-2
+    )
+
+    # First frame
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_xlabel(r"$x_1$")
+    ax.set_ylabel(r"$x_2$")
+    ax.set_zlabel("y")
+    ax.set_zlim(-0.5, 1.5)
+    # predict a mesh of data
+    y_pred = np.load("./data/frames/frame0.npz")["y"]
+    y_pred_mesh = np.reshape(y_pred, x1_mesh.shape)
+    func = franke_function(x1_flat, x2_flat).reshape(size, size)
+    plot = ax.plot_surface(x1_mesh, x2_mesh, y_pred_mesh, **plot_args)
+    plot2 = ax.plot_surface(x1_mesh, x2_mesh, func, alpha=.75)
+    fig.colorbar(plot, shrink=0.5)
+
+    def update_surf(num, x1_mesh, x2_mesh):
+        y_pred = np.load("./data/frames/frame" + str(num) + ".npz")["y"]
+        y_pred_mesh = np.reshape(y_pred, x1_mesh.shape)
+        ax.clear()
+        ax.set_zlim(-0.5, 1.5)
+        plot = ax.plot_surface(x1_mesh, x2_mesh, y_pred_mesh, **plot_args)
+        plot2 = ax.plot_surface(x1_mesh, x2_mesh, func, alpha=.75)
+        return plot, plot2
+
+    ani = animation.FuncAnimation(
+        fig, update_surf, epochs, fargs=(x1_mesh, x2_mesh), interval=333, blit=False
+    )
+    # plt.show()
+
+    ani.save("./figures/franke.gif",  fps=3,  writer='imagemagick')

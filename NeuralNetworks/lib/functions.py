@@ -1,3 +1,4 @@
+# Dependencies: numpy, matplotlib, sklearn, tensorflow and seaborn
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -11,18 +12,18 @@ from sklearn.preprocessing import PolynomialFeatures
 from scikitplot.helpers import cumulative_gain_curve
 import seaborn as sns
 import tensorflow as tf
-
+# other directories in this project
 from lib.neural_network import *
 from lib.logistic_regression import *
 from lib.linear_regression import *
 
 
 
-def LogReg(X_train, y_train, X_test, y_test, epochs):
+def LogReg(X_train, y_train, X_test, y_test, epochs, sklrn=False):
     print("Logistic Regression\n")
 
     # my own Log Reg
-    clf = SGDClassification(batch_size=50, epochs=epochs)
+    clf = SGDClassification(batch_size=100, epochs=epochs)
     clf.fit(X_train, y_train)
     print("\n\t\t Error rate\t       | Area ratio\t")
     print("\t\t Training | Validation | Training | Validation")
@@ -32,27 +33,28 @@ def LogReg(X_train, y_train, X_test, y_test, epochs):
     y_pred = clf.predict(X_train, binary=True)
     train_acc = np.sum(y_pred != y_train) / len(y_pred)
     train_area = roc_curve(y_train, y_pred)
-    print(f"\tMy SGD  | {train_acc:2.2}    | {test_acc:2.2}", end="")
+    print(f"\tMy SGD  | {train_acc:2.2f}    | {test_acc:2.2}", end="")
     print(f"       | {train_area:2.2}     | {test_area:2.2}")
 
     # Sklearn Log Reg
-    clf = SGDClassifier(
-        loss="log",
-        penalty="none",
-        fit_intercept=True,
-        max_iter=epochs,
-        shuffle=True,
-        learning_rate="optimal",
-    )
-    clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test)
-    test_acc = np.sum(y_pred != y_test) / len(y_pred)
-    test_area = roc_curve(y_test, y_pred)
-    y_pred = clf.predict(X_train)
-    train_acc = np.sum(y_pred != y_train) / len(y_pred)
-    train_area = roc_curve(y_train, y_pred)
-    print(f"\tSklearn | {train_acc:2.2}    | {test_acc:2.2}", end="")
-    print(f"       | {train_area:2.2}     | {test_area:2.2}")
+    if sklrn:
+        clf = SGDClassifier(
+            loss="log",
+            penalty="none",
+            fit_intercept=True,
+            max_iter=epochs,
+            shuffle=True,
+            learning_rate="optimal",
+        )
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
+        test_acc = np.sum(y_pred != y_test) / len(y_pred)
+        test_area = roc_curve(y_test, y_pred)
+        y_pred = clf.predict(X_train)
+        train_acc = np.sum(y_pred != y_train) / len(y_pred)
+        train_area = roc_curve(y_train, y_pred)
+        print(f"\tSklearn | {train_acc:2.2f}    | {test_acc:2.2}", end="")
+        print(f"       | {train_area:2.2}     | {test_area:2.2}")
 
     """
     Logistic Regression
@@ -175,11 +177,11 @@ def NN_regression(X_train, y_train, X_test, y_test):
     layers = [2, 100, 60, 1]
     act_fns = ["tanh", "tanh", "linear"]
     NN = NeuralNetwork(layers=layers, cost=cost, act_fns=act_fns)
-    epochs = 10
+    epochs = 100
     batch_size = 100
-    learning_rates = np.logspace(-2, -3, 2)
-    regular_params = np.logspace(-3, -1, 3)
-    r2_scores = np.zeros((2, 3))
+    learning_rates = np.logspace(-2, -4, 3)
+    regular_params = np.logspace(-4, -1, 4)
+    r2_scores = np.zeros((3, 4))
     epoch_arr = np.linspace(1, epochs, epochs)
 
     for i, eta in enumerate(learning_rates):
@@ -404,8 +406,9 @@ def animate_franke(X_train, y_train, X_test, y_test, epochs=10):
     plot_args = {'rstride': 1, 'cstride': 1, 'cmap':
                  mpl.cm.coolwarm, 'linewidth': 0.01, 'antialiased': True,
                  'shade': True, 'alpha': .35}
+                 
     size = 50
-    l = np.linspace(0.001, 0.999, size)
+    l = np.linspace(0.01, 0.99, size)
     x1_mesh, x2_mesh = np.meshgrid(l, l)
     x1_flat, x2_flat = x1_mesh.flatten(), x2_mesh.flatten()
     X_test = np.column_stack((x1_flat, x2_flat))
@@ -414,11 +417,12 @@ def animate_franke(X_train, y_train, X_test, y_test, epochs=10):
     # NN setup
     NN = NeuralNetwork(
         layers=[2, 100, 60, 1], cost=MSE(),
-        act_fns=["tanh", "tanh", "linear"]
+        act_fns=["relu", "relu", "linear"]
     )
     NN.SGD(
         X_train, y_train, validation_data=(X_test, y_test),
-        epochs=epochs, batch_size=100, eta=1e-2, reg=1e-2
+        epochs=epochs, batch_size=100, eta=1e-2, reg=1e-2,
+        save_frames=True
     )
 
     # First frame
@@ -433,7 +437,7 @@ def animate_franke(X_train, y_train, X_test, y_test, epochs=10):
     y_pred_mesh = np.reshape(y_pred, x1_mesh.shape)
     func = franke_function(x1_flat, x2_flat).reshape(size, size)
     plot = ax.plot_surface(x1_mesh, x2_mesh, y_pred_mesh, **plot_args)
-    plot2 = ax.plot_surface(x1_mesh, x2_mesh, func, alpha=.75)
+    plot2 = ax.plot_surface(x1_mesh, x2_mesh, func, alpha=.55)
     fig.colorbar(plot, shrink=0.5)
 
     def update_surf(num, x1_mesh, x2_mesh):
@@ -442,7 +446,7 @@ def animate_franke(X_train, y_train, X_test, y_test, epochs=10):
         ax.clear()
         ax.set_zlim(-0.5, 1.5)
         plot = ax.plot_surface(x1_mesh, x2_mesh, y_pred_mesh, **plot_args)
-        plot2 = ax.plot_surface(x1_mesh, x2_mesh, func, alpha=.75)
+        plot2 = ax.plot_surface(x1_mesh, x2_mesh, func, alpha=.55)
         return plot, plot2
 
     ani = animation.FuncAnimation(
@@ -450,4 +454,4 @@ def animate_franke(X_train, y_train, X_test, y_test, epochs=10):
     )
     # plt.show()
 
-    ani.save("./figures/franke.gif",  fps=3,  writer='imagemagick')
+    ani.save("./animations/franke_relu.gif",  fps=3,  writer='imagemagick')

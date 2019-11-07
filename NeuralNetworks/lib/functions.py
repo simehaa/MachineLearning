@@ -480,7 +480,7 @@ def roc_curve(
     return area_ratio
 
 
-def animate_franke(X_train, y_train, X_test, y_test, epochs=10):
+def animate_franke(X_train, y_train, X_test, y_test, epochs=10, activation="sigmoid"):
     size = 50
     l = np.linspace(0.01, 0.99, size)
     x1_mesh, x2_mesh = np.meshgrid(l, l)
@@ -491,44 +491,49 @@ def animate_franke(X_train, y_train, X_test, y_test, epochs=10):
     # NN setup
     NN = NeuralNetwork(
         layers=[2, 100, 60, 1], cost=MSE(),
-        act_fns=["relu", "relu", "linear"]
+        act_fns=[activation, activation, "linear"]
     )
     NN.SGD(
         X_train, y_train, validation_data=(X_test, y_test),
         epochs=epochs, batch_size=100, eta=1e-2, reg=1e-2,
         save_frames=True
     )
-
+    cost_arr = NN.cost_arr
     # First frame
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
+    ax.set_title(f"Epoch {0:3}/{epochs}, MSE = {cost_arr[0]:2.3f}")
     ax.set_xlabel(r"$x_1$")
     ax.set_ylabel(r"$x_2$")
     ax.set_zlabel("y")
     ax.set_zlim(-0.5, 1.5)
     # predict a mesh of data
-    plot_args = {'rstride': 1, 'cstride': 1, 'cmap':
-                 mpl.cm.coolwarm, 'linewidth': 0.01, 'antialiased': True,
-                 'shade': True, 'alpha': .35}
+    plot_args = {'rstride': 1, 'cstride': 1, 'color': "k",
+                 'linewidth': 0.01, 'antialiased': True,
+                 'shade': True, 'alpha': .35, 'zorder': 0.5
+                 }
     y_pred = np.load("./data/frames/frame0.npz")["y"]
     y_pred_mesh = np.reshape(y_pred, x1_mesh.shape)
     func = franke_function(x1_flat, x2_flat).reshape(size, size)
     plot = ax.plot_surface(x1_mesh, x2_mesh, y_pred_mesh, **plot_args)
-    plot2 = ax.plot_surface(x1_mesh, x2_mesh, func, alpha=.55)
-    fig.colorbar(plot, shrink=0.5)
+    plot2 = ax.plot_surface(x1_mesh, x2_mesh, func, alpha=.45, cmap=mpl.cm.coolwarm, zorder=0.3)
 
-    def update_surf(num, x1_mesh, x2_mesh):
+    def update_surf(num, x1_mesh, x2_mesh, cost_arr):
         y_pred = np.load("./data/frames/frame" + str(num) + ".npz")["y"]
         y_pred_mesh = np.reshape(y_pred, x1_mesh.shape)
         ax.clear()
+        ax.set_title(f"Epoch {num:3}/{epochs}, MSE = {cost_arr[num]:2.3f}")
+        ax.set_xlabel(r"$x_1$")
+        ax.set_ylabel(r"$x_2$")
+        ax.set_zlabel("y")
         ax.set_zlim(-0.5, 1.5)
         plot = ax.plot_surface(x1_mesh, x2_mesh, y_pred_mesh, **plot_args)
-        plot2 = ax.plot_surface(x1_mesh, x2_mesh, func, alpha=.55)
+        plot2 = ax.plot_surface(x1_mesh, x2_mesh, func, alpha=.45, cmap=mpl.cm.coolwarm, zorder=0.3)
         return plot, plot2
 
     ani = animation.FuncAnimation(
-        fig, update_surf, epochs, fargs=(x1_mesh, x2_mesh), interval=333, blit=False
+        fig, update_surf, epochs, fargs=(x1_mesh, x2_mesh, cost_arr), interval=200, blit=False
     )
-    # plt.show()
 
-    ani.save("./animations/franke_relu.gif",  fps=3,  writer='imagemagick')
+    print("\tWriting \"franke_" + activation + ".gif\".")
+    ani.save("./animations/franke_" + activation + ".gif",  fps=5,  writer='imagemagick')

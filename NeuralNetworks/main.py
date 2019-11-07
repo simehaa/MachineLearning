@@ -15,19 +15,23 @@ def main():
     y_train = train_data["y"]
     X_test = test_data["X"]
     y_test = test_data["y"]
-    LogReg(X_train, y_train, X_test, y_test, epochs=1000)
+    # LogReg(X_train, y_train, X_test, y_test, epochs=1000)
     # NN_classification(X_train, y_train, X_test, y_test)
 
 
     # ----- Regression, Franke Function -----
 
-    X_train, y_train = generate_franke_data(N=30000, noise=.3)
-    X_test, y_test = generate_franke_data(N=10000, noise=.3)
+    X_train, y_train = generate_franke_data(N=30000, noise=0)
+    X_test, y_test = generate_franke_data(N=10000, noise=0)
     # LinReg(X_train, y_train, X_test, y_test)
     # NN_regression(X_train, y_train, X_test, y_test)
-    # animate_franke(X_train, y_train, X_test, y_test, epochs=100)
+    # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="sigmoid")
+    # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="tanh")
+    # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="relu")
+    # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="relu6")
+    animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="l_relu")
 
 
 if __name__ == "__main__":
-    tests()
+    # tests()
     main()

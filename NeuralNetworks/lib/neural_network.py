@@ -71,6 +71,35 @@ def relu_derivative(z):
     return a
 
 
+def l_relu(z):
+    """ReLU activation function"""
+    a = 0.01*z
+    a[z >= 0] = z[z >= 0]
+    return a
+
+
+def l_relu_derivative(z):
+    """ReLU derivative"""
+    a = np.ones(z.shape)
+    a[z < 0] = 0.01
+    return a
+
+
+def relu6(z):
+    """ReLU6 activation function"""
+    a = np.zeros(z.shape)
+    a[z >= 0] = z[z >= 0]
+    a[z >= 6] = 6
+    return a
+
+
+def relu6_derivative(z):
+    """ReLU6 derivative"""
+    a = np.zeros(z.shape)
+    a[np.logical_or(z >= 0, z <= 6)] = 1
+    return a
+
+
 class NeuralNetwork:
     """
     Info
@@ -125,6 +154,12 @@ class NeuralNetwork:
             elif a == "relu":
                 self.act.append(relu)
                 self.d_act.append(relu_derivative)
+            elif a == "relu6":
+                self.act.append(relu6)
+                self.d_act.append(relu6_derivative)
+            elif a == "l_relu":
+                self.act.append(l_relu)
+                self.d_act.append(l_relu_derivative)
             else:
                 raise ValueError(a + " is not implemented as an activation function.")
 

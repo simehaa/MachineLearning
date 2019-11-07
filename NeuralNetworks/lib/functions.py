@@ -64,7 +64,7 @@ def LogReg(X_train, y_train, X_test, y_test, epochs, sklrn=False):
     print(f"\tMy SGD  | {train_acc:2.2f}    | {test_acc:2.2}", end="")
     print(f"       | {train_area:2.2}     | {test_area:2.2}")
 
-    sortin_smoothing_method(clf.predict(X_test, binary=False), y_test)
+    sorting_smoothing_method(clf.predict(X_test, binary=False), y_test)
 
     # Sklearn Log Reg
     if sklrn:
@@ -97,7 +97,7 @@ def LogReg(X_train, y_train, X_test, y_test, epochs, sklrn=False):
 	Sklearn | 0.30    | 0.24       | 0.35     | 0.40
     """
 
-def sortin_smoothing_method(y_pred, y_test, n=50):
+def sorting_smoothing_method(y_pred, y_test, n=50):
     # order data from min to max
     ind = np.argsort(y_pred)
     y_pred = y_pred[ind]
@@ -119,18 +119,21 @@ def sortin_smoothing_method(y_pred, y_test, n=50):
     line = LinReg.predict(X)
     intercept, slope = LinReg.beta
     mse, r2 = LinReg.k_fold_cross_validation(5, "ols")
+    print(f"\tR2 score = {r2:1.3f}")
 
     # plot
     plt.plot(pred_prob, line, 'k-', label=f"y = {slope:1.2}x + {intercept:1.4}\n$R^2$ = {r2:1.3}")
-    plt.plot(pred_prob, est_prob, 'k.', alpha=.3)
+    plt.plot(pred_prob, est_prob, 'k.', alpha=.1)
     plt.grid()
     plt.xlim(0, 1)
     plt.ylim(0, 1)
+    plt.xlabel("Predicted Probability")
+    plt.ylabel("Estimated Actual Probability")
     plt.legend()
     plt.show()
 
 
-def NN_classification(X_train, y_train, X_test, y_test):
+def NN_classification_grid_search(X_train, y_train, X_test, y_test):
     """
     Perform classification by using a Neural Network. The layers and
     activation function can be specified under.
@@ -172,8 +175,8 @@ def NN_classification(X_train, y_train, X_test, y_test):
                 X_train, y_train, validation_data=(X_test, y_test),
                 epochs=epochs, batch_size=batch_size, eta=eta, reg=reg
             )
-            y_pred = NN.predict(X_test, binary=False)
-            sortin_smoothing_method(y_pred, y_test)
+            # y_pred = NN.predict(X_test, binary=False)
+            # sortin_smoothing_method(y_pred, y_test)
             area_ratio_tr = roc_curve(y_train, NN.predict(X_train, binary=False))
             area_ratio_te = roc_curve(y_test, NN.predict(X_test, binary=False))
             area_ratios_tr[i, j] = area_ratio_tr
@@ -201,34 +204,72 @@ def NN_classification(X_train, y_train, X_test, y_test):
     plot_heat_map(area_ratios_te, "Area ratios from test set")
 
     eta_i, reg_i = np.unravel_index(
+        np.argmax(area_ratios_tr, axis=None), area_ratios_te.shape
+    )
+    print("\tTraining data:")
+    print(f"\t\tBest area ratio = {area_ratios_tr[eta_i, reg_i]:2.2}")
+    print(f"\t\teta = {learning_rates[eta_i]:g}, reg = {regular_params[reg_i]:g}")
+    eta_i, reg_i = np.unravel_index(
         np.argmax(area_ratios_te, axis=None), area_ratios_te.shape
     )
-    eta_te = learning_rates[eta_i]
-    reg_te = regular_params[reg_i]
-    area_ratio_te = area_ratios_te[eta_i, reg_i]
-    area_ratio_tr = area_ratios_tr[eta_i, reg_i]
+    print("\tTest data:")
+    print(f"\t\tBest area ratio = {area_ratios_tr[eta_i, reg_i]:2.2}")
+    print(f"\t\teta = {learning_rates[eta_i]:g}, reg = {regular_params[reg_i]:g}")
 
-    # Lift chart on test set with best eta and reg_param:
-    print("\n\tEvaluating error rates and creating ROC curve")
+
+def NN_classification(X_train, y_train, X_test, y_test):
+    """
+    Perform classification by using a Neural Network. The layers and
+    activation function can be specified under.
+
+    Parameters
+    ----------
+    X_train : array, shape(N, p)
+        Training data.
+
+    y_train : array, shape(N, )
+        Training data.
+
+    X_test : array, shape(N, p)
+        Testing data.
+
+    y_test : array, shape(N, )
+        Testing data.
+
+    Returns
+    -------
+    None : prints/plots the results directly.
+    """
+    print("Neural Network\n")
+    layers = [41, 100, 75, 50, 34, 1]
+    cost = CrossEntropy()
+    act_fns = ["sigmoid", "sigmoid", "sigmoid", "sigmoid", "sigmoid"]
+    NN = NeuralNetwork(layers=layers, cost=cost, act_fns=act_fns)
+
+    epochs = 10
+    batch_size = 100
+    eta = 0.1
+    reg = 1e-5
     NN.SGD(
         X_train, y_train, validation_data=(X_test, y_test),
-        epochs=epochs, batch_size=batch_size, eta=eta_te, reg=reg_te
+        epochs=epochs, batch_size=batch_size, eta=eta, reg=reg
     )
     # Error rates
     y_pred = NN.predict(X_train, binary=True)
     err_tr = 1 - np.sum(y_pred == y_train) / len(y_train)
     y_pred = NN.predict(X_test, binary=True)
     err_te = 1 - np.sum(y_pred == y_test) / len(y_test)
-    sortin_smoothing_method(y_pred, y_test)
 
-    # ROC curve
+    y_pred = NN.predict(X_train, binary=False)
+    area_ratio_tr = roc_curve(y_train, y_pred, show=False)
     y_pred = NN.predict(X_test, binary=False)
-    roc_curve(y_test, y_pred, show=True)
+    area_ratio_te = roc_curve(y_test, y_pred, show=True)
+    sorting_smoothing_method(y_pred, y_test)
 
     print("\tTraining data:")
     print(f"\t\tBest err rate = {err_tr:2.2}, area ratio = {area_ratio_tr:2.2}")
     print("\tTest data:")
-    print(f"\t\tBest err rate = {err_te:2.2}, area ratio = {area_ratio_tr:2.2}")
+    print(f"\t\tBest err rate = {err_te:2.2}, area ratio = {area_ratio_te:2.2}")
     """
     Evaluating error rates and creating ROC curve
 	Training Neural Network with 10 epochs
@@ -528,7 +569,7 @@ def animate_franke(X_train, y_train, X_test, y_test, epochs=10, activation="sigm
 
     # NN setup
     NN = NeuralNetwork(
-        layers=[2, 100, 100, 1], cost=MSE(),
+        layers=[2, 100, 60, 1], cost=MSE(),
         act_fns=[activation, activation, "linear"]
     )
     NN.SGD(

@@ -67,7 +67,7 @@ class SGDClassification:
         """
         N, self.features = X.shape
         if beta == None:
-            self.beta = (np.random.random(self.features) - 0.5) * 1.4
+            self.beta = (np.random.random(self.features) - 0.5) * 0.2
         else:
             if beta.shape[0] == self.features:
                 self.beta = beta
@@ -80,6 +80,7 @@ class SGDClassification:
         learning_rate = lambda t: 1 / (t + 10)
         self.bias = 0
 
+        print(f"\tRunning SGD with {self.epochs} epochs.")
         self.printprogress(0)
         # iterative loop over epochs
         for t in range(self.epochs):

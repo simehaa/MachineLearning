@@ -18,8 +18,36 @@ from lib.logistic_regression import *
 from lib.linear_regression import *
 
 
-
 def LogReg(X_train, y_train, X_test, y_test, epochs, sklrn=False):
+    """
+    Perform logistic regression on the data given as parameters. Uses the
+    SGDClassification class in logistic_regression.py.
+
+    Parameters
+    ----------
+    X_train : array, shape(N, p)
+        Training data.
+
+    y_train : array, shape(N, )
+        Training data.
+
+    X_test : array, shape(N, p)
+        Testing data.
+
+    y_test : array, shape(N, )
+        Testing data.
+
+    epochs : int
+        Number of epochs to run the algorithm for.
+
+    sklrn : bool
+        If true, runs scikit-learn's SGDClassifier in addition to double
+        check the results.
+
+    Returns
+    -------
+    None : prints/plots the results directly.
+    """
     print("Logistic Regression\n")
 
     # my own Log Reg
@@ -69,6 +97,28 @@ def LogReg(X_train, y_train, X_test, y_test, epochs, sklrn=False):
 
 
 def NN_classification(X_train, y_train, X_test, y_test):
+    """
+    Perform classification by using a Neural Network. The layers and
+    activation function can be specified under.
+
+    Parameters
+    ----------
+    X_train : array, shape(N, p)
+        Training data.
+
+    y_train : array, shape(N, )
+        Training data.
+
+    X_test : array, shape(N, p)
+        Testing data.
+
+    y_test : array, shape(N, )
+        Testing data.
+
+    Returns
+    -------
+    None : prints/plots the results directly.
+    """
     print("Neural Network\n")
     layers = [41, 100, 75, 50, 34, 1]
     cost = CrossEntropy()
@@ -152,27 +202,29 @@ def NN_classification(X_train, y_train, X_test, y_test):
     """
 
 
-def tensorflow(X_train, y_train, X_test, y_test):
-    model = tf.keras.models.Sequential(
-        [
-            tf.keras.layers.Dense(100, activation="relu"),
-            tf.keras.layers.Dense(60, activation="relu"),
-            tf.keras.layers.Dense(1, activation="linear")
-            # tf.keras.layers.Dropout(0.2),
-        ]
-    )  # try two outputs and softmax (well taylored for )
-    model.compile(
-        optimizer="adam", loss="mse", metrics=["r2"]
-    )
-    model.fit(
-        X_train, y_train, epochs=50, batch_size=100, validation_data=(X_test, y_test)
-    )
-
-    y_pred = model.predict(X_test)
-    return y_pred
-
-
 def NN_regression(X_train, y_train, X_test, y_test):
+    """
+    Perform regression on the data given as parameters by using a neural
+    network.
+
+    Parameters
+    ----------
+    X_train : array, shape(N, p)
+        Training data.
+
+    y_train : array, shape(N, )
+        Training data.
+
+    X_test : array, shape(N, p)
+        Testing data.
+
+    y_test : array, shape(N, )
+        Testing data.
+
+    Returns
+    -------
+    None : prints/plots the results directly.
+    """
     cost = MSE()
     layers = [2, 100, 60, 1]
     act_fns = ["tanh", "tanh", "linear"]
@@ -236,6 +288,28 @@ def NN_regression(X_train, y_train, X_test, y_test):
 
 
 def LinReg(X_train, y_train, X_test, y_test):
+    """
+    Perform linear regression on the data given as parameters by using a
+    Ridge regression and 5-fold CV.
+
+    Parameters
+    ----------
+    X_train : array, shape(N, p)
+        Training data.
+
+    y_train : array, shape(N, )
+        Training data.
+
+    X_test : array, shape(N, p)
+        Testing data.
+
+    y_test : array, shape(N, )
+        Testing data.
+
+    Returns
+    -------
+    None : prints/plots the results directly.
+    """
     regular_params = np.linspace(-13, -5, 9)
     poly_degrees = np.linspace(7, 15, 9, dtype=np.uint32)
     r2_scores = np.zeros((9, 9))
@@ -284,6 +358,7 @@ def r2_score(y, y_pred):
 
 
 def plot_confusion(y, y_pred):
+    """Plot the confusion matrix of y and y_pred"""
     ax = skplt.metrics.plot_confusion_matrix(y, y_pred, normalize=True)
     bottom, top = ax.get_ylim()
     ax.set_ylim(bottom + 0.5, top - 0.5)
@@ -291,6 +366,7 @@ def plot_confusion(y, y_pred):
 
 
 def generate_franke_data(N=10000, noise=0.5):
+    """Generate a data set of N points with noisy franke function data"""
     x1 = np.random.uniform(0, 1, N)
     x2 = np.random.uniform(0, 1, N)
     X = np.column_stack((x1, x2))
@@ -340,6 +416,10 @@ def accuracy(y_test, y_pred):
 
 
 def print_accuracy(correct_ones, correct_zeros, total_ones, total_zeros):
+    """
+    Print accuracy in terms of both correct ones and zeros and
+    total accuracy
+    """
     acc = (correct_ones + correct_zeros) / (total_ones + total_zeros)
     print(f"\tCorrect ones  : {correct_ones} / {total_ones}")
     print(f"\tCorrect zeros : {correct_zeros} / {total_zeros}")
@@ -371,10 +451,8 @@ def roc_curve(
             "{} category/ies".format(len(classes))
         )
 
-    y_probas = y_probas.reshape((len(y_probas), 1))
-    y_probas = np.concatenate((np.zeros((len(y_probas), 1)), y_probas), axis=1)
-
-    percentages, gains2 = cumulative_gain_curve(y_true, y_probas[:, 1], classes[1])
+    y_probas = y_probas.flatten()
+    percentages, gains2 = cumulative_gain_curve(y_true, y_probas, classes[1])
     ones = np.sum(y_true)
     tot = len(y_true)
     best_curve_x = [0, ones, tot]
@@ -403,10 +481,6 @@ def roc_curve(
 
 
 def animate_franke(X_train, y_train, X_test, y_test, epochs=10):
-    plot_args = {'rstride': 1, 'cstride': 1, 'cmap':
-                 mpl.cm.coolwarm, 'linewidth': 0.01, 'antialiased': True,
-                 'shade': True, 'alpha': .35}
-                 
     size = 50
     l = np.linspace(0.01, 0.99, size)
     x1_mesh, x2_mesh = np.meshgrid(l, l)
@@ -433,6 +507,9 @@ def animate_franke(X_train, y_train, X_test, y_test, epochs=10):
     ax.set_zlabel("y")
     ax.set_zlim(-0.5, 1.5)
     # predict a mesh of data
+    plot_args = {'rstride': 1, 'cstride': 1, 'cmap':
+                 mpl.cm.coolwarm, 'linewidth': 0.01, 'antialiased': True,
+                 'shade': True, 'alpha': .35}
     y_pred = np.load("./data/frames/frame0.npz")["y"]
     y_pred_mesh = np.reshape(y_pred, x1_mesh.shape)
     func = franke_function(x1_flat, x2_flat).reshape(size, size)

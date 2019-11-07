@@ -15,7 +15,7 @@ def main():
     y_train = train_data["y"]
     X_test = test_data["X"]
     y_test = test_data["y"]
-    # LogReg(X_train, y_train, X_test, y_test, epochs=1000)
+    LogReg(X_train, y_train, X_test, y_test, epochs=100)
     # NN_classification(X_train, y_train, X_test, y_test)
 
 
@@ -29,7 +29,7 @@ def main():
     # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="tanh")
     # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="relu")
     # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="relu6")
-    animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="l_relu")
+    # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="l_relu")
 
 
 if __name__ == "__main__":

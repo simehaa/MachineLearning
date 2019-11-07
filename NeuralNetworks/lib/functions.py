@@ -64,6 +64,8 @@ def LogReg(X_train, y_train, X_test, y_test, epochs, sklrn=False):
     print(f"\tMy SGD  | {train_acc:2.2f}    | {test_acc:2.2}", end="")
     print(f"       | {train_area:2.2}     | {test_area:2.2}")
 
+    sortin_smoothing_method(clf.predict(X_test, binary=False), y_test)
+
     # Sklearn Log Reg
     if sklrn:
         clf = SGDClassifier(
@@ -94,6 +96,38 @@ def LogReg(X_train, y_train, X_test, y_test, epochs, sklrn=False):
 	My SGD  | 0.29    | 0.22       | 0.35     | 0.40
 	Sklearn | 0.30    | 0.24       | 0.35     | 0.40
     """
+
+def sortin_smoothing_method(y_pred, y_test, n=50):
+    # order data from min to max
+    ind = np.argsort(y_pred)
+    y_pred = y_pred[ind]
+    y_binary = y_test[ind]
+
+    # predicted probability
+    pred_prob = y_pred[n:-n]
+    N = y_pred.shape[0]
+    est_prob = np.zeros(N - n - n)
+
+    # estimated probability according to SSM
+    for i in range(50, N-50):
+        est_prob[i - 50] = np.mean(y_binary[i - n: i + n])
+
+    # linear regression
+    X = np.column_stack((np.ones(N - n - n), pred_prob))
+    LinReg = LinearRegression(X, est_prob)
+    LinReg.ols_fit()
+    line = LinReg.predict(X)
+    intercept, slope = LinReg.beta
+    mse, r2 = LinReg.k_fold_cross_validation(5, "ols")
+
+    # plot
+    plt.plot(pred_prob, line, 'k-', label=f"y = {slope:1.2}x + {intercept:1.4}\n$R^2$ = {r2:1.3}")
+    plt.plot(pred_prob, est_prob, 'k.', alpha=.3)
+    plt.grid()
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+    plt.legend()
+    plt.show()
 
 
 def NN_classification(X_train, y_train, X_test, y_test):
@@ -138,6 +172,8 @@ def NN_classification(X_train, y_train, X_test, y_test):
                 X_train, y_train, validation_data=(X_test, y_test),
                 epochs=epochs, batch_size=batch_size, eta=eta, reg=reg
             )
+            y_pred = NN.predict(X_test, binary=False)
+            sortin_smoothing_method(y_pred, y_test)
             area_ratio_tr = roc_curve(y_train, NN.predict(X_train, binary=False))
             area_ratio_te = roc_curve(y_test, NN.predict(X_test, binary=False))
             area_ratios_tr[i, j] = area_ratio_tr
@@ -183,6 +219,8 @@ def NN_classification(X_train, y_train, X_test, y_test):
     err_tr = 1 - np.sum(y_pred == y_train) / len(y_train)
     y_pred = NN.predict(X_test, binary=True)
     err_te = 1 - np.sum(y_pred == y_test) / len(y_test)
+    sortin_smoothing_method(y_pred, y_test)
+
     # ROC curve
     y_pred = NN.predict(X_test, binary=False)
     roc_curve(y_test, y_pred, show=True)
@@ -490,7 +528,7 @@ def animate_franke(X_train, y_train, X_test, y_test, epochs=10, activation="sigm
 
     # NN setup
     NN = NeuralNetwork(
-        layers=[2, 100, 60, 1], cost=MSE(),
+        layers=[2, 100, 100, 1], cost=MSE(),
         act_fns=[activation, activation, "linear"]
     )
     NN.SGD(
@@ -502,7 +540,7 @@ def animate_franke(X_train, y_train, X_test, y_test, epochs=10, activation="sigm
     # First frame
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
-    ax.set_title(f"Epoch {0:3}/{epochs}, MSE = {cost_arr[0]:2.3f}")
+    ax.set_title(f"Epoch {0:3}/{epochs}, MSE = {cost_arr[0]:5g}")
     ax.set_xlabel(r"$x_1$")
     ax.set_ylabel(r"$x_2$")
     ax.set_zlabel("y")
@@ -522,7 +560,7 @@ def animate_franke(X_train, y_train, X_test, y_test, epochs=10, activation="sigm
         y_pred = np.load("./data/frames/frame" + str(num) + ".npz")["y"]
         y_pred_mesh = np.reshape(y_pred, x1_mesh.shape)
         ax.clear()
-        ax.set_title(f"Epoch {num:3}/{epochs}, MSE = {cost_arr[num]:2.3f}")
+        ax.set_title(f"Epoch {num:3}/{epochs}, MSE = {cost_arr[num]:5g}")
         ax.set_xlabel(r"$x_1$")
         ax.set_ylabel(r"$x_2$")
         ax.set_zlabel("y")

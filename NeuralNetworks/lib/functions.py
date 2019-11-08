@@ -122,7 +122,10 @@ def sorting_smoothing_method(y_pred, y_test, n=50):
     print(f"\tR2 score = {r2:1.3f}")
 
     # plot
-    plt.plot(pred_prob, line, 'k-', label=f"y = {slope:1.2}x + {intercept:1.4}\n$R^2$ = {r2:1.3}")
+    plt.plot(pred_prob, line, 'k-',
+        label=f"y = {slope:1.3f}x + " +
+        f"{intercept:1.4f}\n" +
+        f"$R^2$ = {r2:1.3f}")
     plt.plot(pred_prob, est_prob, 'k.', alpha=.1)
     plt.grid()
     plt.xlim(0, 1)
@@ -308,12 +311,21 @@ def NN_regression(X_train, y_train, X_test, y_test):
     layers = [2, 100, 60, 1]
     act_fns = ["tanh", "tanh", "linear"]
     NN = NeuralNetwork(layers=layers, cost=cost, act_fns=act_fns)
-    epochs = 100
+    epochs = 200
     batch_size = 100
     learning_rates = np.logspace(-2, -4, 3)
     regular_params = np.logspace(-4, -1, 4)
     r2_scores = np.zeros((3, 4))
     epoch_arr = np.linspace(1, epochs, epochs)
+
+    # MSE vs. epochs plot:
+    fig = plt.figure()
+    ax = plt.subplot(111)
+    line = [["b--", "b-.", "b:"],
+             ["g--", "g-.", "g:"],
+             ["r--", "r-.", "r:"],
+             ["y--", "y-.", "y:"]
+    ]
 
     for i, eta in enumerate(learning_rates):
         for j, reg in enumerate(regular_params):
@@ -322,12 +334,20 @@ def NN_regression(X_train, y_train, X_test, y_test):
                 epochs=epochs, batch_size=batch_size, eta=eta, reg=reg
             )
             r2_scores[i, j] = r2_score(y_test, NN.predict(X_test))
-            plt.plot(epoch_arr, NN.cost_arr, label=rf"$\eta=${eta:g}, $\lambda=${reg:g}")
+            ind = np.argmin(NN.cost_arr)
+            e = epoch_arr[ind]
+            c = NN.cost_arr[ind]
+            plt.plot(epoch_arr, NN.cost_arr, line[j][i], label=rf"$\eta, \lambda=$ ({eta:1.0e},{reg:1.0e})")
+            plt.plot(e, c, 'ro')
 
-    plt.ylabel("Cost function (MSE)")
+    plt.plot(epoch_arr, np.ones(epoch_arr.shape)*0.09, "k-", label=r"Irreducible error $\sigma^2$")
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.ylim(0.089, 0.12)
     plt.xlabel("Epochs")
+    plt.ylabel("MSE")
     plt.grid()
-    plt.legend(loc="best")
     plt.show()
 
     fig, ax = plt.subplots(1, 1)

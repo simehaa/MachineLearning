@@ -2,7 +2,7 @@ import numpy as np
 from lib.functions import *
 from lib.test_functions import *
 # from lib.preprocessing import *
-np.random.seed(13)
+np.random.seed(11)
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     y_test = test_data["y"]
     # LogReg(X_train, y_train, X_test, y_test, epochs=1000)
     # NN_classification(X_train, y_train, X_test, y_test)
-    NN_classification_grid_search(X_train, y_train, X_test, y_test) # Best: eta=0.1 reg=1e-5
+    # NN_classification_grid_search(X_train, y_train, X_test, y_test) # Best: eta=0.1 reg=1e-5
 
 
     # ----- Regression, Franke Function -----
@@ -25,7 +25,7 @@ def main():
     X_train, y_train = generate_franke_data(N=30000, noise=.3)
     X_test, y_test = generate_franke_data(N=10000, noise=.3)
     # LinReg(X_train, y_train, X_test, y_test)
-    # NN_regression(X_train, y_train, X_test, y_test)
+    NN_regression(X_train, y_train, X_test, y_test)
     # Animations
     # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="sigmoid")
     # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="tanh")

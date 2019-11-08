@@ -311,7 +311,7 @@ def NN_regression(X_train, y_train, X_test, y_test):
     layers = [2, 100, 60, 1]
     act_fns = ["tanh", "tanh", "linear"]
     NN = NeuralNetwork(layers=layers, cost=cost, act_fns=act_fns)
-    epochs = 200
+    epochs = 750
     batch_size = 100
     learning_rates = np.logspace(-2, -4, 3)
     regular_params = np.logspace(-4, -1, 4)
@@ -343,8 +343,8 @@ def NN_regression(X_train, y_train, X_test, y_test):
     plt.plot(epoch_arr, np.ones(epoch_arr.shape)*0.09, "k-", label=r"Irreducible error $\sigma^2$")
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.ylim(0.089, 0.12)
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=True, shadow=True)
+    plt.ylim(0.089, 0.115)
     plt.xlabel("Epochs")
     plt.ylabel("MSE")
     plt.grid()

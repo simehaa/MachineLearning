@@ -97,7 +97,27 @@ def LogReg(X_train, y_train, X_test, y_test, epochs, sklrn=False):
 	Sklearn | 0.30    | 0.24       | 0.35     | 0.40
     """
 
+
 def sorting_smoothing_method(y_pred, y_test, n=50):
+    """
+    Esimation of actual probability of default by SSM.
+
+    Parameters
+    ----------
+    y_pred : array, shape(N, )
+        Prediction array with continuous values in the range [0, 1].
+
+    y_test : array, shape(N, )
+        Output value array with binary values 0 or 1.
+
+    n : int
+        Size of neighbothood of points to use in SSM (number of points for
+        smoothing will be from i-n, ..., i+n)
+
+    Returns
+    -------
+    None : creates a plot.
+    """
     # order data from min to max
     ind = np.argsort(y_pred)
     y_pred = y_pred[ind]
@@ -528,16 +548,39 @@ def print_accuracy(correct_ones, correct_zeros, total_ones, total_zeros):
 def roc_curve(
     y_true,
     y_probas,
-    title="Cumulative Gains Curve",
     title_fontsize="large",
     text_fontsize="medium",
-    ax=None,
     figsize=None,
     show=False,
 ):
     """
     Plot the ROC-curve diagrams
     Modified code from scikitplot.helpers.plot_cumulative_gain
+
+    Parameters
+    ----------
+    y_true : array, shape(N, )
+        Binary output values
+
+    y_probas : array, shape(N, )
+        Continuous predicted probabilities.
+
+    title_fontsize : str
+        Argument for plot.
+
+    text_fontsize : str
+        Argument for plot.
+
+    figsize : str
+        Argument for plot.
+
+    show : bool
+        If true, plots the figure, if False, only returns the area ratio
+
+    Returns
+    -------
+    area_ratio : float
+        Calculated area ratio in cumulative gain chart.
     """
 
     y_true = np.array(y_true)
@@ -580,6 +623,35 @@ def roc_curve(
 
 
 def animate_franke(X_train, y_train, X_test, y_test, epochs=10, activation="sigmoid"):
+    """
+    Animate the time (epoch) evolution of a neural network regression of the
+    franke function.
+
+    Parameters
+    ----------
+    X_train : array, shape(N, p)
+        Training data.
+
+    y_train : array, shape(N, )
+        Training data.
+
+    X_test : array, shape(N, p)
+        Testing data.
+
+    y_test : array, shape(N, )
+        Testing data.
+
+    epochs : int
+        Total number of epochs (also equivalent to the number of frames in
+        output gif).
+
+    activation : str
+        Which activation function to use between the hidden layers.
+
+    Returns
+    -------
+    None : Produces a gif.
+    """
     size = 50
     l = np.linspace(0.01, 0.99, size)
     x1_mesh, x2_mesh = np.meshgrid(l, l)

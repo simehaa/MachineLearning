@@ -160,30 +160,30 @@ X-data after preprocessing (29 columns)
     6, MARRIAGE: Marital status (1married)
     7, MARRIAGE: Marital status (1single)
     8, MARRIAGE: Marital status (1others)
-    9, PAY_0: Repayment status in September, 2005 (status= -2)
-    10, PAY_2: Repayment status in August, 2005 (status= -2)
-    11, PAY_3: Repayment status in July, 2005 (status= -2)
-    12, PAY_4: Repayment status in June, 2005 (status= -2)
-    13, PAY_5: Repayment status in May, 2005 (status= -2)
-    14, PAY_6: Repayment status in April, 2005 (status= -2)
-    15, PAY_0: Repayment status in September, 2005 (status= -1)
-    16, PAY_2: Repayment status in August, 2005 (status= -1)
-    17, PAY_3: Repayment status in July, 2005 (status= -1)
-    18, PAY_4: Repayment status in June, 2005 (status= -1)
-    19, PAY_5: Repayment status in May, 2005 (status= -1)
-    20, PAY_6: Repayment status in April, 2005 (status= -1)
+    9, PAY_0: Repayment status in September, 2005 (1: status bill paid
+    10, PAY_2: Repayment status in August, 2005 (1: status bill paid
+    11, PAY_3: Repayment status in July, 2005 (1: status bill paid
+    12, PAY_4: Repayment status in June, 2005 (1: status bill paid
+    13, PAY_5: Repayment status in May, 2005 (1: status bill paid
+    14, PAY_6: Repayment status in April, 2005 (1: status bill paid
+    15, PAY_0: Repayment status in September, 2005 (1: status bill NOT paid)
+    16, PAY_2: Repayment status in August, 2005 (1: status bill NOT paid)
+    17, PAY_3: Repayment status in July, 2005 (1: status bill NOT paid)
+    18, PAY_4: Repayment status in June, 2005 (1: status bill NOT paid)
+    19, PAY_5: Repayment status in May, 2005 (1: status bill NOT paid)
+    20, PAY_6: Repayment status in April, 2005 (1: status bill NOT paid)
 
 
         Scaled Columns range [0, 1]
         ----------------------------------
     21, LIMIT_BAL: Amount of given credit in NT dollars
     22, AGE: Scaled age
-    23, PAY_0: Repayment status in September, 2005
-    24, PAY_2: Repayment status in August, 2005
-    25, PAY_3: Repayment status in July, 2005
-    26, PAY_4: Repayment status in June, 2005
-    27, PAY_5: Repayment status in May, 2005
-    28, PAY_6: Repayment status in April, 2005
+    23, PAY_0: Repayment delay in September, 2005
+    24, PAY_2: Repayment delay in August, 2005
+    25, PAY_3: Repayment delay in July, 2005
+    26, PAY_4: Repayment delay in June, 2005
+    27, PAY_5: Repayment delay in May, 2005
+    28, PAY_6: Repayment delay in April, 2005
     29, BILL_AMT1: Amount of bill statement in September, 2005
     30, BILL_AMT2: Amount of bill statement in August, 2005
     31, BILL_AMT3: Amount of bill statement in July, 2005

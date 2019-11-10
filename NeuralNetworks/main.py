@@ -6,6 +6,13 @@ np.random.seed(11)
 
 
 def main():
+    """
+    Control centre for all analyses. This script mainly controls which functions
+    in lib/functions.py to run, which in turn uses backend algorithms in other
+    files in the lib/ folder
+
+    Comment/uncomment the lines for desired analysis.
+    """
     # ----- Classification, Credit Card Data -----
 
     # preprocess_raw_data(test_size=0.2) # Saves new data files in ./data/processed/
@@ -15,7 +22,7 @@ def main():
     y_train = train_data["y"]
     X_test = test_data["X"]
     y_test = test_data["y"]
-    # LogReg(X_train, y_train, X_test, y_test, epochs=1000)
+    # LogReg(X_train, y_train, X_test, y_test, epochs=10)
     # NN_classification(X_train, y_train, X_test, y_test)
     # NN_classification_grid_search(X_train, y_train, X_test, y_test) # Best: eta=0.1 reg=1e-5
 
@@ -25,7 +32,7 @@ def main():
     X_train, y_train = generate_franke_data(N=30000, noise=.3)
     X_test, y_test = generate_franke_data(N=10000, noise=.3)
     # LinReg(X_train, y_train, X_test, y_test)
-    NN_regression(X_train, y_train, X_test, y_test)
+    # NN_regression(X_train, y_train, X_test, y_test)
     # Animations
     # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="sigmoid")
     # animate_franke(X_train, y_train, X_test, y_test, epochs=100, activation="tanh")

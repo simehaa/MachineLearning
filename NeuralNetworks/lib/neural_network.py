@@ -239,8 +239,10 @@ class NeuralNetwork:
                 self.biases = self.biases - eta * nabla_b / batch_size
             # <<< Backpropagation
             self.printprogress((e + 1) / epochs, e)
-            if save_frames:
+
+            if save_frames:# Used to save the predictions for animation purposes
                 np.savez("./data/frames/frame" + str(e) + ".npz", y=self.predict(self.X_test))
+                
             # <<< Epoch
         print("\n")
         # weights and biases are now trained
